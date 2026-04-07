@@ -77,22 +77,33 @@ fi
 
 # Existing hook present
 if grep -q "$MARKER_START" "$HOOK"; then
-  # voice-check section already present, replace it in place
+  # Voice-check section already present. Strip it and check what's left.
+  STRIPPED=$(mktemp)
   awk -v start="$MARKER_START" -v end="$MARKER_END" '
     $0 ~ start { skip=1; next }
     $0 ~ end { skip=0; next }
     !skip
-  ' "$HOOK" > "$HOOK.tmp"
-  echo "" >> "$HOOK.tmp"
-  awk -v start="$MARKER_START" -v end="$MARKER_END" '
-    $0 ~ start { in_section=1 }
-    in_section { print }
-    $0 ~ end { in_section=0 }
-  ' "$RENDERED" >> "$HOOK.tmp"
-  mv "$HOOK.tmp" "$HOOK"
+  ' "$HOOK" > "$STRIPPED"
+
+  # If the stripped file contains only boilerplate (shebang, comments, blanks,
+  # and maybe a bare `exit 0`), the hook was entirely voice-check's. Wipe and
+  # reinstall fresh to avoid orphaned exit statements from older templates.
+  MEANINGFUL=$(grep -vE '^\s*$|^\s*#|^\s*exit 0\s*$|^#!' "$STRIPPED" | wc -l | tr -d ' ')
+  if [ "$MEANINGFUL" = "0" ]; then
+    cp "$RENDERED" "$HOOK"
+    chmod +x "$HOOK"
+    rm "$RENDERED" "$STRIPPED"
+    echo "installed: $HOOK (wiped v1 leftovers and installed fresh)"
+    exit 0
+  fi
+
+  # Otherwise there's other content — append fresh section after the stripped file
+  echo "" >> "$STRIPPED"
+  cat "$RENDERED" >> "$STRIPPED"
+  mv "$STRIPPED" "$HOOK"
   chmod +x "$HOOK"
   rm "$RENDERED"
-  echo "installed: $HOOK (replaced existing voice-check section)"
+  echo "installed: $HOOK (replaced voice-check section, preserved other hooks)"
 else
   # Append voice-check section to the end of the existing hook
   echo "" >> "$HOOK"

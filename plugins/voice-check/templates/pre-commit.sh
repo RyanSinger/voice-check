@@ -44,5 +44,5 @@ if [ "$findings_total" -gt 0 ]; then
   echo "  to bypass: git commit --no-verify"
 fi
 
-# === voice-check section end ===
 exit 0
+# === voice-check section end ===
