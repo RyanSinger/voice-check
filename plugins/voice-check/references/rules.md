@@ -1,22 +1,6 @@
----
-name: voice-check
-description: Scan a document for AI writing tells, em dashes, hedging, puffery, and tone violations. Use when reviewing or editing prose, when invoked via /voice-check, or before committing any document. Layers global rules with per-repo supplements found at .claude/voice-check.md walking up from the target file.
----
+# Voice Check Rules
 
-# Voice Check
-
-Scan the specified document (or the most recently written/edited file) for AI writing patterns and tone violations. Fix every issue found, then report what you changed.
-
-## Process
-
-1. Determine the target file path
-2. Walk up from the target file to the git root, looking for `.claude/voice-check.md` at each level. Stop at the first one found. Do not aggregate.
-3. Load the supplement if found
-4. Read the target file
-5. Scan for every category below, plus any rules from the supplement
-6. **Auto-fix mode (default for /voice-check):** rewrite file in place
-7. **Report-only mode (when called from pre-commit hook):** print findings, do not modify the file
-8. Report a summary of changes by category
+This is the single source of truth for the writing rules used by both the `voice-check` (reactive scan) and `writing-guard` (proactive guard) skills. When changing rules, edit this file and both skills get the update automatically.
 
 ## Hard Rules (fix all violations, no exceptions)
 
@@ -65,14 +49,3 @@ Write neutral, not like ad copy.
 ## Vague Attributions
 
 "Experts say," "industry reports suggest," "observers note." Name the source or cut the claim.
-
-## Output
-
-After fixing, report:
-- Number of violations found and fixed, by category
-- Any judgment calls where you left something as-is and why
-
-## References
-
-- `references/wikipedia-signs.md` — full Wikipedia article on signs of AI writing
-- `references/examples.md` — before/after examples for each rule category

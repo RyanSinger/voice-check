@@ -17,4 +17,4 @@ jobs:
       - name: Install pytest
         run: pip install pytest
       - name: Run tests
-        run: python -m pytest tests/test_engine.py -v
+        run: cd plugins/voice-check && python -m pytest tests/test_engine.py -v

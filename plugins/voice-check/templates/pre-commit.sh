@@ -1,23 +1,19 @@
 #!/usr/bin/env bash
 # voice-check pre-commit hook (advisory, report-only)
-# Installed by: ~/.claude/skills/voice-check/templates/install-hook.sh
+# Installed by: voice-check plugin install-hook.sh
 # === voice-check section start ===
 
 set -e
 
-VOICE_CHECK_ENGINE="$HOME/.claude/skills/voice-check/engine/voice_check.py"
-VOICE_CHECK_VENV="$HOME/.claude/skills/voice-check/.venv/bin/python"
-
-if [ -x "$VOICE_CHECK_VENV" ]; then
-  PYTHON="$VOICE_CHECK_VENV"
-else
-  PYTHON="${VOICE_CHECK_PYTHON:-python3}"
-fi
+VOICE_CHECK_ENGINE="__VOICE_CHECK_ENGINE__"
 
 if [ ! -f "$VOICE_CHECK_ENGINE" ]; then
-  echo "voice-check: engine not found at $VOICE_CHECK_ENGINE (skipping)"
+  echo "voice-check: engine not found at $VOICE_CHECK_ENGINE"
+  echo "voice-check: re-run install-hook.sh after upgrading the plugin"
   exit 0
 fi
+
+PYTHON="${VOICE_CHECK_PYTHON:-python3}"
 
 staged_md=$(git diff --cached --name-only --diff-filter=ACM | grep '\.md$' || true)
 

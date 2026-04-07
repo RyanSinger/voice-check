@@ -1,0 +1,16 @@
+{
+  "name": "voice-check",
+  "owner": {
+    "name": "Ryan Singer"
+  },
+  "metadata": {
+    "description": "Writing-rule enforcement skills for Claude Code: scan, guard, per-repo supplements"
+  },
+  "plugins": [
+    {
+      "name": "voice-check",
+      "source": "./plugins/voice-check",
+      "description": "Two skills that catch AI writing tells: voice-check (reactive scan + git pre-commit hook) and writing-guard (proactive self-censor before drafting)"
+    }
+  ]
+}
