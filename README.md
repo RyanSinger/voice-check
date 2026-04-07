@@ -70,14 +70,14 @@ claude plugin marketplace update voice-check
 If you have the pre-commit hook installed in any repo, re-run `install-hook.sh` after each upgrade so the hook picks up the new engine path:
 
 ```bash
-~/.claude/plugins/cache/voice-check/voice-check/*/plugins/voice-check/templates/install-hook.sh /path/to/your/repo
+~/.claude/plugins/cache/voice-check/voice-check/*/templates/install-hook.sh /path/to/your/repo
 ```
 
 ### Install the git pre-commit hook in a repo
 
 ```bash
 cd /path/to/your/repo
-~/.claude/plugins/cache/voice-check/voice-check/*/plugins/voice-check/templates/install-hook.sh
+~/.claude/plugins/cache/voice-check/voice-check/*/templates/install-hook.sh
 ```
 
 The installer is idempotent. If a pre-commit hook already exists, it appends a marked voice-check section rather than overwriting. To uninstall, delete the section between `# === voice-check section start ===` and `# === voice-check section end ===` from `.git/hooks/pre-commit`.
@@ -89,7 +89,7 @@ The hook is **advisory only**, it never blocks commits. Findings print to stderr
 The Python engine has a 15-test pytest suite. To run it:
 
 ```bash
-cd ~/.claude/plugins/cache/voice-check/voice-check/*/plugins/voice-check
+cd ~/.claude/plugins/cache/voice-check/voice-check/*
 python3 -m venv .venv
 .venv/bin/pip install pytest
 .venv/bin/python -m pytest tests/test_engine.py -v

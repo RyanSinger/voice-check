@@ -13,7 +13,7 @@ The `voice-check` skill cleans up AI writing tells AFTER they appear in a file. 
 
 ## Process
 
-1. Read `references/rules.md` in full before writing anything
+1. Read `../../references/rules.md` in full before writing anything (the file lives at the plugin root, not inside the skill dir)
 2. As you draft, self-check each sentence against the rules. If a sentence triggers any rule, rewrite it before continuing. Do not finish the draft and clean up later.
 3. After completing the draft, do one final pass against the rules.
 4. If you cannot express something without violating a rule, prefer the rule over the original phrasing.
@@ -27,4 +27,4 @@ The `voice-check` skill cleans up AI writing tells AFTER they appear in a file. 
 
 ## References
 
-- `references/rules.md` — the rule list (shared with voice-check)
+- `../../references/rules.md` — the rule list (shared with voice-check, lives at the plugin root)

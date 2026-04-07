@@ -9,7 +9,7 @@ Scan a file for AI writing patterns and tone violations. Fix every issue found, 
 
 ## Process
 
-1. Read `references/rules.md` for the full rule list
+1. Read `../../references/rules.md` for the full rule list (the file lives at the plugin root, not inside the skill dir)
 2. Determine the target file path
 3. Walk up from the target file to the git root, looking for `.claude/voice-check.md` at each level. Stop at the first one found. Do not aggregate across levels.
 4. Load the supplement if found
@@ -21,6 +21,8 @@ Scan a file for AI writing patterns and tone violations. Fix every issue found, 
 
 ## References
 
-- `references/rules.md` — the rule list (single source of truth)
-- `references/wikipedia-signs.md` — full Wikipedia article on signs of AI writing
-- `references/examples.md` — before/after examples for each rule category
+All reference files live at the plugin root, two levels up from this skill directory:
+
+- `../../references/rules.md` — the rule list (single source of truth)
+- `../../references/wikipedia-signs.md` — full Wikipedia article on signs of AI writing
+- `../../references/examples.md` — before/after examples for each rule category

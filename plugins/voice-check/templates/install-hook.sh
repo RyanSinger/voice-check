@@ -32,7 +32,8 @@ fi
 ENGINE=""
 
 # 1. Look in the plugin cache (marketplace install)
-PLUGIN_CACHE_HIT=$(find "$HOME/.claude/plugins/cache" -path "*plugins/voice-check/engine/voice_check.py" 2>/dev/null | sort -V | tail -1)
+# Layout: ~/.claude/plugins/cache/voice-check/voice-check/<version>/engine/voice_check.py
+PLUGIN_CACHE_HIT=$(find "$HOME/.claude/plugins/cache/voice-check" -path "*/engine/voice_check.py" 2>/dev/null | sort -V | tail -1)
 if [ -n "$PLUGIN_CACHE_HIT" ]; then
   ENGINE="$PLUGIN_CACHE_HIT"
 fi
