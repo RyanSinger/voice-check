@@ -59,3 +59,14 @@ The installed pre-commit hook actually works on a real repo. Covered by a test o
 
 Reason for adding: neither gen-1 variant touched the hook install or runtime path. A silently broken hook template would not be caught by any existing test. This is the next real gap.
 
+## 8. Markdown structural safety (added gen-2 ratchet)
+
+The engine does not fire false positives on common markdown structural elements: indented bullet list items, fenced code blocks, inline code, headings, tables. Verified by expanded clean fixtures and targeted tests.
+
+- 5: dedicated clean fixture includes indented bullets (`  - nested`), fenced code blocks with hyphens inside, inline code with hyphens, and at least one table. A test or the existing clean-fixture test proves the engine reports zero findings on all of it. The fix is landed in the engine, not just documented.
+- 3: fix landed but test coverage is thin; or fixture covers only two of the four categories.
+- 1: unchanged; indented bullets still produce `no_dashes` false positives.
+
+Reason for adding: running the engine against `- first\n- second\n  - nested` in an ad-hoc fixture produces `no_dashes` findings on the nested bullets because the hyphen-separator regex `\s-\s` matches indented list markers. The clean fixture is too narrow to have caught this. Real documents have bullet lists; this is a blocker for honest use.
+
+
