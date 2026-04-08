@@ -2,42 +2,47 @@
 
 This is the single source of truth for the writing rules used by both the `voice-check` (reactive scan) and `writing-guard` (proactive guard) skills. When changing rules, edit this file and both skills get the update automatically.
 
+Each rule is marked with a tag:
+
+- `[engine + skill]` — enforced by the Python rules engine at pre-commit hook speed AND by the Claude-loaded skills.
+- `[skill only]` — only enforced by the Claude-loaded skills. The Python engine does not attempt this because it depends on context the regex engine cannot reliably see.
+
 ## Hard Rules (fix all violations, no exceptions)
 
-### No dashes
+### No dashes `[engine + skill]`
 Em dashes and en dashes are banned. Hyphens used as separators or punctuation are also banned. Replace with commas, periods, colons, or parentheses. Hyphens inside compound words ("voice-check," "first-person") are fine.
 
-### No hedging
+### No hedging `[engine + skill]`
 Cut "I can take on," "I could potentially help with," "I'm pushing for this direction," "would like to." Replace with ownership: "I own X," "Ready to do Y," "This is the plan."
 
-### No copula avoidance
-Don't replace "is" with "serves as," "stands as," "represents," "marks." Just say "is."
+### No copula avoidance `[engine + skill]`
+Don't replace "is" with "serves as," "stands as," "acts as," "functions as," "represents," "marks." Just say "is." The engine catches the "as" variants ("serves as", "stands as", "acts as", "functions as") with a word-boundary regex. Nuanced replacements like "represents" are left to the skill.
 
-## AI Vocabulary Cluster (flag when 2+ appear in the same document)
+## AI Vocabulary Cluster (flag when 2+ appear in the same document) `[engine + skill]`
 
 Additionally (starting sentences), align with, crucial, delve, emphasizing, enduring, enhance, fostering, garner, highlight (as verb), interplay, intricate/intricacies, key (as adjective), landscape (abstract noun), pivotal, showcase, tapestry (abstract noun), testament, underscore (as verb), valuable, vibrant.
 
 One might be fine. Two or more in the same document is a pattern. Replace with plain language.
 
-## Puffery and Significance Language
+## Puffery and Significance Language `[engine + skill]`
 
 Flag and rewrite: "pivotal," "crucial," "testament," "underscores," "highlights its importance," "represents a shift," "setting the stage for," "indelible mark," "deeply rooted," "groundbreaking," "renowned."
 
 Show importance through specifics, not inflating adjectives.
 
-## Superficial Analysis via Dangling Participles
+## Superficial Analysis via Dangling Participles `[engine + skill]`
 
-Flag and rewrite: "...highlighting the importance of," "...ensuring that," "...reflecting broader trends," "...contributing to," "...fostering," "...encompassing."
+Flag and rewrite: "...highlighting the importance of," "...ensuring that," "...reflecting broader trends," "...contributing to," "...fostering," "...encompassing," "...emphasizing," "...underscoring," "...showcasing."
 
-These are filler. Cut them or say something concrete.
+These are filler. Cut them or say something concrete. The engine catches comma + gerund constructions using a conservative regex anchored on a seed list of gerunds.
 
-## Promotional Tone
+## Promotional Tone `[engine + skill]`
 
 Flag and rewrite: "boasts," "vibrant," "rich" (figurative), "nestled," "in the heart of," "groundbreaking," "showcasing," "commitment to," "natural beauty."
 
 Write neutral, not like ad copy.
 
-## Structural Tells
+## Structural Tells `[skill only]`
 
 - **Rule of three**: Don't default to "X, Y, and Z" triads. Break the pattern.
 - **Negative parallelisms**: "Not just X, but Y" and "It's not about X, it's about Y." Overused. Rewrite.
@@ -46,6 +51,20 @@ Write neutral, not like ad copy.
 - **Bolded inline headers on every bullet**: Use sparingly, not mechanically.
 - **Elegant variation**: Don't swap synonyms to avoid repeating a word. Say "Nick" three times rather than "the engineer," "the technical lead," "the key contributor."
 
-## Vague Attributions
+These are context-sensitive patterns. The Python engine does not attempt them because a regex cannot reliably tell signal from noise here.
 
-"Experts say," "industry reports suggest," "observers note." Name the source or cut the claim.
+## Vague Attributions `[engine + skill]`
+
+"Experts say," "experts agree," "industry reports suggest," "industry observers note," "observers note," "sources say," "critics argue," "many believe," "it is widely believed." Name the source or cut the claim.
+
+## Per-repo supplements
+
+In addition to the rules above, the engine loads extra rows from a per-repo `.claude/voice-check.md` supplement file. Authors add banned words, phrases, or regex patterns by embedding fenced code blocks with one of these info strings:
+
+```
+voice-check-words      one word per line, matched with word boundaries
+voice-check-phrases    one literal phrase per line, matched case-insensitive
+voice-check-regex      one raw regex per line, matched case-insensitive
+```
+
+Each non-blank, non-comment line inside such a block becomes a supplement rule row appended to the scanner table at scan time. Findings from supplement rules carry the rule name `supplement:<kind>` so they are attributable.

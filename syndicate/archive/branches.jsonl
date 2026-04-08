@@ -1,0 +1,2 @@
+{"generation": 1, "variant": "a", "branch": "gen-1-a", "parent": "syndicate-seed-1", "score": 4.83, "pruned": true, "operator": "decompose", "change": "per-category rule files under engine/rules/ package, conservative regex, markdown-list supplement format"}
+{"generation": 1, "variant": "b", "branch": "gen-1-b", "parent": "syndicate-seed-1", "score": 5.00, "pruned": false, "operator": "borrow", "change": "data-driven RULES table in single rules.py, fenced-code-block supplement format with words+phrases+regex kinds"}

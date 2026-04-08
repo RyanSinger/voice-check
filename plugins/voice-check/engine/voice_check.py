@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import List
 
 import rules
+import supplement
 
 
 def scan(file_path: Path) -> List[dict]:
@@ -10,17 +11,22 @@ def scan(file_path: Path) -> List[dict]:
 
     Each finding is a dict with: rule, line, col, snippet, message.
     Empty list means clean.
+
+    If a per-repo supplement file is found via supplement.find_for(), its
+    extra rule rows are merged into the scan table for this invocation.
     """
-    findings = []
-    text = Path(file_path).read_text()
-    # Per-line checks
-    for line_num, line in enumerate(text.splitlines(), start=1):
-        findings.extend(rules.check_dashes(line, line_num))
-        findings.extend(rules.check_puffery(line, line_num))
-        findings.extend(rules.check_promotional(line, line_num))
-    # Document-level checks
-    findings.extend(rules.check_ai_vocab_cluster(text))
-    return findings
+    file_path = Path(file_path)
+    text = file_path.read_text()
+
+    extra_rows: List[dict] = []
+    sup_path = supplement.find_for(file_path)
+    if sup_path is not None:
+        try:
+            extra_rows = supplement.load_rows(sup_path)
+        except Exception:
+            extra_rows = []
+
+    return rules.scan_text(text, extra_rows=extra_rows)
 
 
 def format_findings(findings: List[dict]) -> str:

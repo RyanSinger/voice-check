@@ -48,3 +48,14 @@ Engine imports nothing outside the Python standard library. Scanning a 500-line 
 - 5: docs match reality, explicit engine-vs-skill split where relevant.
 - 3: mostly accurate, a minor gap or two.
 - 1: still advertises behaviors the engine does not ship.
+
+## 7. Pre-commit hook end-to-end integration (added gen-1 ratchet)
+
+The installed pre-commit hook actually works on a real repo. Covered by a test or verified procedure that: installs the hook via `install-hook.sh` into a temp repo, stages a dirty markdown file, runs the hook script (or `git commit`), confirms the engine findings appear on stderr, and confirms the hook exits 0 (advisory).
+
+- 5: integration test exists in the pytest suite, passes, and covers both the install flow (templates substitution) and the runtime execution path.
+- 3: a manual verification procedure is documented and proven to work, but not automated as a test.
+- 1: no coverage; install-hook.sh and the template remain untested end-to-end.
+
+Reason for adding: neither gen-1 variant touched the hook install or runtime path. A silently broken hook template would not be caught by any existing test. This is the next real gap.
+
