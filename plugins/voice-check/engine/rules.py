@@ -242,6 +242,51 @@ def compiled(row: dict) -> re.Pattern:
 # Generic scanner
 # ---------------------------------------------------------------------------
 
+_FENCE_RE = re.compile(r"^\s*(```|~~~)")
+_BULLET_RE = re.compile(r"^(\s*)([-*+])(\s+)")
+_INLINE_CODE_RE = re.compile(r"`[^`\n]*`")
+
+
+def _prepare_line_for_rules(line: str) -> str:
+    """Strip inline code spans and leading bullet-list markers from a line.
+
+    Returns a version of the line safe for line-scope rule matching. We
+    replace stripped characters with spaces so that column positions remain
+    aligned with the original line (callers still snippet the raw line).
+    """
+    # Replace inline code spans with same-length runs of spaces
+    def _blank(m: re.Match) -> str:
+        return " " * (m.end() - m.start())
+    out = _INLINE_CODE_RE.sub(_blank, line)
+
+    # Strip the leading bullet marker (turn "  - foo" into "    foo")
+    bm = _BULLET_RE.match(out)
+    if bm:
+        # Replace the [-*+] with a space, keep indentation and trailing space.
+        start, end = bm.start(2), bm.end(2)
+        out = out[:start] + " " + out[end:]
+    return out
+
+
+def _strip_code_blocks(text: str) -> str:
+    """Return text with fenced code block contents replaced by blank lines.
+
+    Preserves line count so line numbers are unaffected if needed elsewhere.
+    """
+    out_lines = []
+    in_fence = False
+    for line in text.splitlines():
+        if _FENCE_RE.match(line):
+            in_fence = not in_fence
+            out_lines.append("")
+            continue
+        if in_fence:
+            out_lines.append("")
+        else:
+            out_lines.append(line)
+    return "\n".join(out_lines)
+
+
 def scan_text(text: str, extra_rows: Optional[Iterable[dict]] = None) -> List[dict]:
     """Run every rule row (built in plus extras) over text and return findings."""
     rows = list(RULES)
@@ -250,12 +295,19 @@ def scan_text(text: str, extra_rows: Optional[Iterable[dict]] = None) -> List[di
 
     findings: List[dict] = []
 
-    # Line-scope pass
+    # Line-scope pass. Track fenced code blocks and skip their contents.
     line_rows = [r for r in rows if r.get("scope", "line") == "line"]
+    in_fence = False
     for line_num, line in enumerate(text.splitlines(), start=1):
+        if _FENCE_RE.match(line):
+            in_fence = not in_fence
+            continue
+        if in_fence:
+            continue
+        scan_line = _prepare_line_for_rules(line)
         for row in line_rows:
             rx = compiled(row)
-            for m in rx.finditer(line):
+            for m in rx.finditer(scan_line):
                 findings.append({
                     "rule": row["name"],
                     "line": line_num,
@@ -264,7 +316,9 @@ def scan_text(text: str, extra_rows: Optional[Iterable[dict]] = None) -> List[di
                     "message": row["message"],
                 })
 
-    # Doc-scope pass: group rows by doc_group and aggregate
+    # Doc-scope pass: group rows by doc_group and aggregate.
+    # Exclude fenced code block content from doc-scope input.
+    doc_text = _strip_code_blocks(text)
     doc_rows = [r for r in rows if r.get("scope") == "doc"]
     groups: Dict[str, List[dict]] = {}
     for r in doc_rows:
@@ -274,7 +328,7 @@ def scan_text(text: str, extra_rows: Optional[Iterable[dict]] = None) -> List[di
         hits: List[tuple] = []  # (pattern, start)
         for row in group_rows:
             rx = compiled(row)
-            for m in rx.finditer(text):
+            for m in rx.finditer(doc_text):
                 hits.append((row["pattern"], m.start()))
         if not hits:
             continue
@@ -356,9 +410,10 @@ def check_ai_vocab_cluster(text: str) -> List[dict]:
     # Run only the ai_vocab_cluster doc-scope rules via the scanner.
     rows = [r for r in RULES if r["category"] == "ai_vocab_cluster"]
 
+    scan_src = _strip_code_blocks(text)
     hits = []
     for row in rows:
-        for m in compiled(row).finditer(text):
+        for m in compiled(row).finditer(scan_src):
             hits.append((row["pattern"], m.start()))
     if len(hits) < 2:
         return []

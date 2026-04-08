@@ -69,4 +69,15 @@ The engine does not fire false positives on common markdown structural elements:
 
 Reason for adding: running the engine against `- first\n- second\n  - nested` in an ad-hoc fixture produces `no_dashes` findings on the nested bullets because the hyphen-separator regex `\s-\s` matches indented list markers. The clean fixture is too narrow to have caught this. Real documents have bullet lists; this is a blocker for honest use.
 
+## 9. Skill file path integrity (added gen-3 ratchet)
+
+All relative reference paths inside skill files (`plugins/voice-check/skills/*/SKILL.md`) resolve to files that actually exist. Specifically, references to `../../references/rules.md`, `../../references/wikipedia-signs.md`, and `../../references/examples.md` from inside each skill directory resolve to existing files in `plugins/voice-check/references/`.
+
+- 5: a test exists in the pytest suite that programmatically reads each SKILL.md, extracts relative paths it mentions, and asserts each resolves to an existing file from the skill directory.
+- 3: a manual verification procedure is documented and passed.
+- 1: no coverage; broken reference paths can slip into a release (as they did in v2.0.1).
+
+Reason for adding: v2.0.1 shipped with a broken relative path in SKILL.md that made the skill unusable at runtime. The fix is in git history, but no test catches the class of bug. Three generations of work on the engine and hook leave the skill file discovery path untested. This is the next real gap.
+
+
 

@@ -261,6 +261,70 @@ def test_supplement_phrase_block_applied(tmp_path):
     assert len(sup) >= 1
 
 
+# ---------------------------------------------------------------------------
+# Markdown structural safety (gen 3, criterion 8)
+# ---------------------------------------------------------------------------
+
+def test_nested_bullet_list_not_flagged_as_hyphen_separator(tmp_path):
+    f = tmp_path / "bullets.md"
+    f.write_text(
+        "# Heading\n"
+        "\n"
+        "- Top level item\n"
+        "  - Nested bullet one\n"
+        "    - Even deeper bullet\n"
+        "* Star bullet item\n"
+        "+ Plus bullet item\n"
+    )
+    findings = voice_check.scan(f)
+    dashes = [x for x in findings if x["rule"] == "no_dashes"]
+    assert dashes == [], f"expected no dash findings, got: {dashes}"
+
+
+def test_fenced_code_block_contents_not_scanned(tmp_path):
+    f = tmp_path / "code.md"
+    f.write_text(
+        "Prose line above.\n"
+        "\n"
+        "```bash\n"
+        "ls -la\n"
+        "grep -r foo .\n"
+        "echo \"crucial pivotal testament\"\n"
+        "```\n"
+        "\n"
+        "Prose line below.\n"
+    )
+    findings = voice_check.scan(f)
+    # The hyphen separators inside the code block must not fire.
+    dashes = [x for x in findings if x["rule"] == "no_dashes"]
+    assert dashes == [], f"expected no dash findings, got: {dashes}"
+    # The ai_vocab cluster words inside the code block must not fire either.
+    cluster = [x for x in findings if x["rule"] == "ai_vocab_cluster"]
+    assert cluster == [], f"expected no cluster findings, got: {cluster}"
+    # Puffery word inside the code block must not fire.
+    puffery = [x for x in findings if x["rule"] == "puffery"]
+    assert puffery == [], f"expected no puffery findings, got: {puffery}"
+
+
+def test_inline_code_span_not_scanned(tmp_path):
+    f = tmp_path / "inline.md"
+    f.write_text(
+        "Run `ls -la` to list files and use `foo-bar` as the identifier.\n"
+    )
+    findings = voice_check.scan(f)
+    dashes = [x for x in findings if x["rule"] == "no_dashes"]
+    assert dashes == [], f"expected no dash findings, got: {dashes}"
+
+
+def test_clean_fixture_structural_cases_pass(tmp_path):
+    # Point directly at the shipped clean.md fixture to ensure the expanded
+    # structural cases (heading, nested list, fenced code, inline code, table)
+    # all remain clean after the bug fix.
+    fixture = Path(__file__).parent / "fixtures" / "clean.md"
+    findings = voice_check.scan(fixture)
+    assert findings == [], f"clean fixture produced findings: {findings}"
+
+
 def test_supplement_load_rows_parses_all_kinds(tmp_path):
     p = tmp_path / "voice-check.md"
     p.write_text(
