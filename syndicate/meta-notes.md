@@ -40,3 +40,21 @@ Record observations here after each generation. When a pattern recurs enough to 
 **Pattern to note:** B won both gen-1 and gen-2 with the borrow operator. Borrow keeps working when the task is "apply a known pattern to a new area" (data-driven rules, full-pipeline tests). Expect it to lose value once the syndicate runs out of known patterns to borrow from. Gen 3 (fixing the bullet-list bug) is a constrain/invert candidate, not borrow.
 
 **Learning to promote?** Not yet. Two generations of borrow-wins isn't enough recurrence. Watch for a third.
+
+## Gen 3 (exploration)
+
+**Tried:** two approaches to criterion 8 (markdown structural safety).
+- A (constrain): surgical guards in rules.py. Bullet marker strip via `_BULLET_RE`, fence-block `in_fence` toggle in `scan_text`, inline code strip via `_INLINE_CODE_RE`. 35 tests pass. +158 lines, 3 files touched.
+- B (invert): new `engine/markdown_view.py` module with pure `as_prose()` preprocessor. Scanner routes through it. 36 tests pass. +247 lines, 5 files.
+
+**Winner:** A (constrain). Genuine tie on functional scoring (both 5.00 across all 8 criteria). Broke tie with pairwise on simplicity: A is smaller, fewer files, no new module, guards colocated with the rules they protect. B's separation would earn its keep in a larger system with multiple consumers of the preprocessor. Not this plugin, not yet.
+
+**Merge gotcha:** `git merge --squash` on the worktree branch produced conflicts because the baseline-sync commit copied files that syndicate/run-1 already has. Switched to the patch-based flow from loop.md: `git diff HEAD~1 HEAD -- plugins/ syndicate/attempts/gen-3-a/` in the worktree, pipe to `git apply` on syndicate/run-1. Clean and deterministic. Will use this pattern going forward when --squash conflicts.
+
+**Operator tally across gens:** borrow (gen-1), borrow (gen-2), constrain (gen-3). Borrow-wins streak broken, as predicted in gen-2 meta-notes. Tool surface is now covered enough that constrain (minimum change) is competitive.
+
+**Ratchet:** added criterion 9, skill file path integrity. v2.0.1 shipped with a broken relative path in SKILL.md, but no test catches that class of bug. Three gens of engine and hook work leave the skill path discovery untested. Next gap.
+
+**Coherence:** continue. Scores stable at ceiling, complexity proportional, ratchets add new coverage each gen rather than recycling.
+
+**Phase transition check:** eligible after this gen. 3+ exploration generations complete (gen-1, gen-2, gen-3). 2+ genuinely different approaches tried across generations (borrow vs decompose in gen-1, borrow vs constrain in gen-2, constrain vs invert in gen-3 — four different operators used, four different architectural stances). Score saturation across three consecutive gens is not evaluation gaming because each ratchet added a real criterion that surfaced a real gap or bug. Transitioning to convergence after this generation.
