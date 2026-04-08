@@ -9,13 +9,15 @@ Both skills share a single rule list, a Python rules engine, and per-repo supple
 
 ## What it catches
 
-- **Hard rules:** em dashes, en dashes, hyphens used as separators, hedging language ("would like to," "could potentially"), copula avoidance ("serves as" instead of "is")
-- **AI vocabulary cluster:** flags when 2+ words from a known LLM-favored vocabulary appear in the same document (pivotal, crucial, leverage, enduring, intricate, tapestry, testament, etc.)
-- **Puffery and significance language:** "groundbreaking," "renowned," "pivotal moment," "indelible mark"
-- **Promotional tone:** "boasts," "nestled in the heart of," "vibrant," "showcasing"
-- **Dangling participles:** "...highlighting the importance of," "...ensuring that," "...fostering"
-- **Structural tells:** rule of three, negative parallelism, false ranges, challenges-and-future-prospects, elegant variation
-- **Vague attributions:** "experts say," "industry observers note"
+Rules tagged **[engine]** run in the Python pre-commit hook engine. Rules tagged **[skill]** run only in the Claude-loaded skills, because they need context a regex cannot reliably see.
+
+- **Hard rules [engine]:** em dashes, en dashes, hyphens used as separators, hedging language ("would like to," "could potentially," "it is worth noting"), copula avoidance ("serves as," "stands as," "acts as," "functions as")
+- **AI vocabulary cluster [engine]:** flags when 2+ words from a known LLM-favored vocabulary appear in the same document (pivotal, crucial, leverage, enduring, intricate, tapestry, testament, etc.)
+- **Puffery and significance language [engine]:** "groundbreaking," "renowned," "pivotal," "crucial," "testament," "indelible," "transformative"
+- **Promotional tone [engine]:** "boasts," "nestled in the heart of," "vibrant," "showcasing," "commitment to"
+- **Dangling participles [engine]:** comma followed by gerund phrases like "...highlighting the importance of," "...ensuring that," "...fostering growth"
+- **Vague attributions [engine]:** "experts say," "experts agree," "industry observers note," "sources say," "many believe"
+- **Structural tells [skill]:** rule of three, negative parallelism, false ranges, challenges-and-future-prospects, elegant variation
 
 The full rule list is in `plugins/voice-check/references/rules.md`.
 
@@ -28,7 +30,7 @@ Two skills, two timings:
    - Manual `/voice-check <file>` — auto-fixes in place
    - Git pre-commit hook — fast Python rules engine, report-only, advisory
 
-The Python engine handles deterministic rules (dashes, vocabulary cluster, puffery, promotional tone) at hook speed. The Claude-loaded skill handles nuanced rules (tone, voice, dangling-participle context) when invoked manually.
+The Python engine handles deterministic rules (dashes, vocabulary cluster, puffery, promotional tone, hedging, copula avoidance, dangling participles, vague attributions) at hook speed via a single data-driven rule table. The Claude-loaded skill handles context-sensitive patterns (structural tells, elegant variation, rule of three) when invoked manually.
 
 ## Layered rules: per-repo supplements
 

@@ -158,3 +158,188 @@ def test_find_supplement_stops_at_git_root(tmp_path):
     import supplement
     result = supplement.find_for(target)
     assert result is None
+
+
+# ---------------------------------------------------------------------------
+# New rule categories (variant B, data-driven table)
+# ---------------------------------------------------------------------------
+
+def test_hedging_phrase_flagged(tmp_path):
+    f = tmp_path / "dirty.md"
+    f.write_text("I would like to help with the rollout.\n")
+    findings = voice_check.scan(f)
+    hedging = [x for x in findings if x["rule"] == "hedging"]
+    assert len(hedging) >= 1
+
+
+def test_hedging_not_flagged_on_neutral_sentence(tmp_path):
+    f = tmp_path / "clean.md"
+    f.write_text("I own the rollout. Ready to ship Friday.\n")
+    findings = voice_check.scan(f)
+    hedging = [x for x in findings if x["rule"] == "hedging"]
+    assert hedging == []
+
+
+def test_copula_avoidance_flagged(tmp_path):
+    f = tmp_path / "dirty.md"
+    f.write_text("The platform serves as a foundation for growth.\n")
+    findings = voice_check.scan(f)
+    copula = [x for x in findings if x["rule"] == "copula_avoidance"]
+    assert len(copula) >= 1
+
+
+def test_copula_avoidance_not_flagged_on_is(tmp_path):
+    f = tmp_path / "clean.md"
+    f.write_text("The platform is the foundation.\n")
+    findings = voice_check.scan(f)
+    copula = [x for x in findings if x["rule"] == "copula_avoidance"]
+    assert copula == []
+
+
+def test_dangling_participle_flagged(tmp_path):
+    f = tmp_path / "dirty.md"
+    f.write_text("We shipped the feature, highlighting the importance of speed.\n")
+    findings = voice_check.scan(f)
+    dangling = [x for x in findings if x["rule"] == "dangling_participle"]
+    assert len(dangling) >= 1
+
+
+def test_dangling_participle_not_flagged_on_plain_sentence(tmp_path):
+    f = tmp_path / "clean.md"
+    f.write_text("We shipped the feature on Tuesday.\n")
+    findings = voice_check.scan(f)
+    dangling = [x for x in findings if x["rule"] == "dangling_participle"]
+    assert dangling == []
+
+
+def test_vague_attribution_flagged(tmp_path):
+    f = tmp_path / "dirty.md"
+    f.write_text("Experts say the trend will continue into next year.\n")
+    findings = voice_check.scan(f)
+    vague = [x for x in findings if x["rule"] == "vague_attribution"]
+    assert len(vague) >= 1
+
+
+def test_vague_attribution_not_flagged_with_named_source(tmp_path):
+    f = tmp_path / "clean.md"
+    f.write_text("Per the 2025 Stack Overflow survey, the trend will continue.\n")
+    findings = voice_check.scan(f)
+    vague = [x for x in findings if x["rule"] == "vague_attribution"]
+    assert vague == []
+
+
+def test_supplement_rule_applied_from_fenced_block(tmp_path):
+    # Create a fake repo with a supplement that bans "flagship"
+    (tmp_path / ".git").mkdir()
+    (tmp_path / ".claude").mkdir()
+    (tmp_path / ".claude" / "voice-check.md").write_text(
+        "# supplement\n\n"
+        "```voice-check-words\n"
+        "flagship\n"
+        "```\n"
+    )
+    doc = tmp_path / "doc.md"
+    doc.write_text("Our flagship product launches Monday.\n")
+    findings = voice_check.scan(doc)
+    sup = [x for x in findings if x["rule"].startswith("supplement:")]
+    assert len(sup) >= 1
+    assert any("flagship" in x["message"].lower() for x in sup)
+
+
+def test_supplement_phrase_block_applied(tmp_path):
+    (tmp_path / ".git").mkdir()
+    (tmp_path / ".claude").mkdir()
+    (tmp_path / ".claude" / "voice-check.md").write_text(
+        "```voice-check-phrases\n"
+        "best in class\n"
+        "```\n"
+    )
+    doc = tmp_path / "doc.md"
+    doc.write_text("We deliver best in class support.\n")
+    findings = voice_check.scan(doc)
+    sup = [x for x in findings if x["rule"].startswith("supplement:")]
+    assert len(sup) >= 1
+
+
+# ---------------------------------------------------------------------------
+# Markdown structural safety (gen 3, criterion 8)
+# ---------------------------------------------------------------------------
+
+def test_nested_bullet_list_not_flagged_as_hyphen_separator(tmp_path):
+    f = tmp_path / "bullets.md"
+    f.write_text(
+        "# Heading\n"
+        "\n"
+        "- Top level item\n"
+        "  - Nested bullet one\n"
+        "    - Even deeper bullet\n"
+        "* Star bullet item\n"
+        "+ Plus bullet item\n"
+    )
+    findings = voice_check.scan(f)
+    dashes = [x for x in findings if x["rule"] == "no_dashes"]
+    assert dashes == [], f"expected no dash findings, got: {dashes}"
+
+
+def test_fenced_code_block_contents_not_scanned(tmp_path):
+    f = tmp_path / "code.md"
+    f.write_text(
+        "Prose line above.\n"
+        "\n"
+        "```bash\n"
+        "ls -la\n"
+        "grep -r foo .\n"
+        "echo \"crucial pivotal testament\"\n"
+        "```\n"
+        "\n"
+        "Prose line below.\n"
+    )
+    findings = voice_check.scan(f)
+    # The hyphen separators inside the code block must not fire.
+    dashes = [x for x in findings if x["rule"] == "no_dashes"]
+    assert dashes == [], f"expected no dash findings, got: {dashes}"
+    # The ai_vocab cluster words inside the code block must not fire either.
+    cluster = [x for x in findings if x["rule"] == "ai_vocab_cluster"]
+    assert cluster == [], f"expected no cluster findings, got: {cluster}"
+    # Puffery word inside the code block must not fire.
+    puffery = [x for x in findings if x["rule"] == "puffery"]
+    assert puffery == [], f"expected no puffery findings, got: {puffery}"
+
+
+def test_inline_code_span_not_scanned(tmp_path):
+    f = tmp_path / "inline.md"
+    f.write_text(
+        "Run `ls -la` to list files and use `foo-bar` as the identifier.\n"
+    )
+    findings = voice_check.scan(f)
+    dashes = [x for x in findings if x["rule"] == "no_dashes"]
+    assert dashes == [], f"expected no dash findings, got: {dashes}"
+
+
+def test_clean_fixture_structural_cases_pass(tmp_path):
+    # Point directly at the shipped clean.md fixture to ensure the expanded
+    # structural cases (heading, nested list, fenced code, inline code, table)
+    # all remain clean after the bug fix.
+    fixture = Path(__file__).parent / "fixtures" / "clean.md"
+    findings = voice_check.scan(fixture)
+    assert findings == [], f"clean fixture produced findings: {findings}"
+
+
+def test_supplement_load_rows_parses_all_kinds(tmp_path):
+    p = tmp_path / "voice-check.md"
+    p.write_text(
+        "```voice-check-words\n"
+        "foo\n"
+        "```\n"
+        "```voice-check-phrases\n"
+        "bar baz\n"
+        "```\n"
+        "```voice-check-regex\n"
+        "\\bqux\\d+\\b\n"
+        "```\n"
+    )
+    import supplement
+    rows = supplement.load_rows(p)
+    kinds = sorted({r["kind"] for r in rows})
+    assert kinds == ["phrase", "regex", "word"]
+    assert all(r["name"].startswith("supplement:") for r in rows)
