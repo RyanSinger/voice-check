@@ -117,11 +117,12 @@ def test_find_supplement_returns_none_when_absent(tmp_path):
 
 
 import subprocess
+import sys
 
 
 def test_cli_clean_file_returns_zero():
     result = subprocess.run(
-        [str(Path(__file__).parent.parent / ".venv" / "bin" / "python"),
+        [sys.executable,
          "engine/voice_check.py", "--report-only", "tests/fixtures/clean.md"],
         cwd=str(Path(__file__).parent.parent),
         capture_output=True,
@@ -133,7 +134,7 @@ def test_cli_clean_file_returns_zero():
 
 def test_cli_dirty_file_reports_findings():
     result = subprocess.run(
-        [str(Path(__file__).parent.parent / ".venv" / "bin" / "python"),
+        [sys.executable,
          "engine/voice_check.py", "--report-only", "tests/fixtures/dirty-universal.md"],
         cwd=str(Path(__file__).parent.parent),
         capture_output=True,
