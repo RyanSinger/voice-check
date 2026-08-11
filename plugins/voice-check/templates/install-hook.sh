@@ -15,15 +15,20 @@ set -e
 REPO_DIR="${1:-$(pwd)}"
 TEMPLATE_DIR="$(cd "$(dirname "$0")" && pwd)"
 TEMPLATE="$TEMPLATE_DIR/pre-commit.sh"
-HOOK_DIR="$REPO_DIR/.git/hooks"
+
+# Hooks live in the common git dir, shared by every linked worktree.
+GIT_COMMON=$(git -C "$REPO_DIR" rev-parse --git-common-dir 2>/dev/null) || {
+  echo "error: $REPO_DIR is not a git repo"
+  exit 1
+}
+case "$GIT_COMMON" in
+  /*) ;;
+  *) GIT_COMMON="$REPO_DIR/$GIT_COMMON" ;;
+esac
+HOOK_DIR="$GIT_COMMON/hooks"
 HOOK="$HOOK_DIR/pre-commit"
 MARKER_START="# === voice-check section start ==="
 MARKER_END="# === voice-check section end ==="
-
-if [ ! -d "$REPO_DIR/.git" ]; then
-  echo "error: $REPO_DIR is not a git repo"
-  exit 1
-fi
 
 if [ ! -f "$TEMPLATE" ]; then
   echo "error: hook template not found at $TEMPLATE"
@@ -100,7 +105,7 @@ if grep -q "$MARKER_START" "$HOOK"; then
     exit 0
   fi
 
-  # Otherwise there's other content — append fresh section after the stripped file
+  # Otherwise there's other content: append fresh section after the stripped file
   echo "" >> "$STRIPPED"
   cat "$RENDERED" >> "$STRIPPED"
   mv "$STRIPPED" "$HOOK"
