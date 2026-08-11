@@ -4,6 +4,7 @@ __pycache__/
 .pytest_cache/
 .venv/
 .DS_Store
+.claude/settings.local.json
 .vscode/
 .idea/
 *.swp
