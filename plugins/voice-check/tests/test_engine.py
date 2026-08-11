@@ -408,3 +408,53 @@ def test_vocab_2026_not_flagged_on_plain_use(tmp_path):
     findings = voice_check.scan(f)
     vocab = [x for x in findings if x["rule"] == "vocab_2026"]
     assert vocab == []
+
+
+# ---------------------------------------------------------------------------
+# 2026 refresh: leaked model markup artifacts
+# ---------------------------------------------------------------------------
+
+def test_markup_artifact_token_flagged(tmp_path):
+    f = tmp_path / "dirty.md"
+    f.write_text("The study backs this claim. :contentReference[oaicite:0]{index=0}\n")
+    findings = voice_check.scan(f)
+    artifacts = [x for x in findings if x["rule"] == "markup_artifacts"]
+    assert len(artifacts) >= 1
+
+
+def test_markup_artifact_gemini_cite_flagged(tmp_path):
+    f = tmp_path / "dirty.md"
+    f.write_text("Revenue grew 40 percent last year. [cite: 3]\n")
+    findings = voice_check.scan(f)
+    artifacts = [x for x in findings if x["rule"] == "markup_artifacts"]
+    assert len(artifacts) >= 1
+
+
+def test_markup_artifact_in_code_fence_not_flagged(tmp_path):
+    f = tmp_path / "quoting.md"
+    f.write_text(
+        "Example of a leaked token:\n"
+        "\n"
+        "```\n"
+        ":contentReference[oaicite:0]{index=0}\n"
+        "```\n"
+    )
+    findings = voice_check.scan(f)
+    artifacts = [x for x in findings if x["rule"] == "markup_artifacts"]
+    assert artifacts == []
+
+
+def test_emoji_bullet_flagged(tmp_path):
+    f = tmp_path / "dirty.md"
+    f.write_text("\U0001F680 Ship the feature\n")
+    findings = voice_check.scan(f)
+    artifacts = [x for x in findings if x["rule"] == "markup_artifacts"]
+    assert len(artifacts) >= 1
+
+
+def test_emoji_midline_not_flagged(tmp_path):
+    f = tmp_path / "clean.md"
+    f.write_text("We shipped the feature \U0001F680 and moved on.\n")
+    findings = voice_check.scan(f)
+    artifacts = [x for x in findings if x["rule"] == "markup_artifacts"]
+    assert artifacts == []

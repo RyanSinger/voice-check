@@ -252,6 +252,28 @@ RULES: List[dict] = [
         "message": "2026 AI vocabulary: 'send a signal'. Say what actually happens.",
         "scope": "line",
     },
+
+    # -- leaked model markup artifacts --------------------------------------
+    {
+        "name": "markup_artifacts",
+        "category": "markup_artifacts",
+        "kind": "regex",
+        "pattern": (
+            r"contentReference|oaicite|turn\d+search\d+|\[cite[:_]"
+            r"|\[span_\d+\]|grok_card|grok_render|ppl-ai-file-upload"
+            r"|attached_file"
+        ),
+        "message": "Leaked AI citation artifact. Delete the token; restore a real citation if one belongs here.",
+        "scope": "line",
+    },
+    {
+        "name": "markup_artifacts",
+        "category": "markup_artifacts",
+        "kind": "regex",
+        "pattern": r"^\s*[☀-➿\U0001F300-\U0001FAFF]️?\s+",
+        "message": "Emoji used as a bullet marker. Use standard list markers.",
+        "scope": "line",
+    },
 ]
 
 
