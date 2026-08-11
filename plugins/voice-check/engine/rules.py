@@ -184,6 +184,103 @@ RULES: List[dict] = [
             "valuable", "vibrant", "leveraging", "leverage",
         ]
     ],
+
+    # -- faux-conversational bridges (2026 refresh) -------------------------
+    *[
+        {
+            "name": "bridge_phrases",
+            "category": "bridge_phrases",
+            "kind": "phrase",
+            "pattern": p,
+            "message": f"Faux-conversational bridge: '{p}'. Cut it or state the point directly.",
+            "scope": "line",
+        }
+        for p in [
+            "here's the thing",
+            "but here's the truth",
+            "don't get me wrong",
+            "let's dive in",
+            "let's delve into",
+            "we will explore",
+            "let's examine",
+        ]
+    ],
+    {
+        "name": "bridge_phrases",
+        "category": "bridge_phrases",
+        "kind": "regex",
+        "pattern": r"\bin this section,?\s+we\b",
+        "message": "Faux-conversational bridge: 'in this section we'. Cut the meta commentary.",
+        "scope": "line",
+    },
+    {
+        "name": "bridge_phrases",
+        "category": "bridge_phrases",
+        "kind": "regex",
+        "pattern": r"\bat the end of the day\b(?!\s+shift\b)",
+        "message": "Faux-conversational bridge: 'at the end of the day'. Cut it or state the point directly.",
+        "scope": "line",
+    },
+
+    # -- 2026 vocabulary cluster, phrase-level only -------------------------
+    # Bare words (quietly, shift, signal, compound...) are too common for
+    # word-boundary matching; those are skill-only. See references/rules.md.
+    *[
+        {
+            "name": "vocab_2026",
+            "category": "vocab_2026",
+            "kind": "phrase",
+            "pattern": p,
+            "message": f"2026 AI vocabulary: '{p}'. Replace with something concrete.",
+            "scope": "line",
+        }
+        for p in [
+            "this matters because",
+            "the pull of",
+            "built different",
+            "do the work",
+            "decisions compound",
+        ]
+    ],
+    {
+        "name": "vocab_2026",
+        "category": "vocab_2026",
+        "kind": "regex",
+        # Stop list keeps non-gerund "ing" words (during, morning...) from firing.
+        "pattern": r"\bquietly\s+(?!(?:during|morning|evening|something|anything|everything|nothing)\b)\w+ing\b",
+        "message": "2026 AI vocabulary: 'quietly [verb]ing'. Name the action plainly.",
+        "scope": "line",
+    },
+    {
+        "name": "vocab_2026",
+        "category": "vocab_2026",
+        "kind": "regex",
+        "pattern": r"\bsends?\s+(?:a|the)\s+signal\b",
+        "message": "2026 AI vocabulary: 'send a signal'. Say what actually happens.",
+        "scope": "line",
+    },
+
+    # -- leaked model markup artifacts --------------------------------------
+    {
+        "name": "markup_artifacts",
+        "category": "markup_artifacts",
+        "kind": "regex",
+        "pattern": (
+            r"contentReference|oaicite|turn\d+search\d+|\[cite[:_]"
+            r"|\[span_\d+\]|grok_card|grok_render|ppl-ai-file-upload"
+            r"|attached_file"
+        ),
+        "message": "Leaked AI citation artifact. Delete the token; restore a real citation if one belongs here.",
+        "scope": "line",
+    },
+    {
+        "name": "markup_artifacts",
+        "category": "markup_artifacts",
+        "kind": "regex",
+        "pattern": r"^\s*[☀-➿⬀-⯿\U0001F300-\U0001FAFF]️?\s+",
+        "message": "Emoji used as a bullet marker. Use standard list markers.",
+        "scope": "line",
+    },
 ]
 
 
@@ -254,10 +351,15 @@ def _prepare_line_for_rules(line: str) -> str:
     replace stripped characters with spaces so that column positions remain
     aligned with the original line (callers still snippet the raw line).
     """
+    # Normalize curly apostrophe (U+2019) to a straight apostrophe so
+    # apostrophe-bearing phrases match either form. Same length, so column
+    # positions stay aligned with the original line.
+    out = line.replace("’", "'")
+
     # Replace inline code spans with same-length runs of spaces
     def _blank(m: re.Match) -> str:
         return " " * (m.end() - m.start())
-    out = _INLINE_CODE_RE.sub(_blank, line)
+    out = _INLINE_CODE_RE.sub(_blank, out)
 
     # Strip the leading bullet marker (turn "  - foo" into "    foo")
     bm = _BULLET_RE.match(out)

@@ -4,8 +4,8 @@ This is the single source of truth for the writing rules used by both the `voice
 
 Each rule is marked with a tag:
 
-- `[engine + skill]` — enforced by the Python rules engine at pre-commit hook speed AND by the Claude-loaded skills.
-- `[skill only]` — only enforced by the Claude-loaded skills. The Python engine does not attempt this because it depends on context the regex engine cannot reliably see.
+- `[engine + skill]`: enforced by the Python rules engine at pre-commit hook speed AND by the Claude-loaded skills.
+- `[skill only]`: only enforced by the Claude-loaded skills. The Python engine does not attempt this because it depends on context the regex engine cannot reliably see.
 
 ## Hard Rules (fix all violations, no exceptions)
 
@@ -45,17 +45,41 @@ Write neutral, not like ad copy.
 ## Structural Tells `[skill only]`
 
 - **Rule of three**: Don't default to "X, Y, and Z" triads. Break the pattern.
-- **Negative parallelisms**: "Not just X, but Y" and "It's not about X, it's about Y." Overused. Rewrite.
+- **Negative parallelisms and contrast reframes**: "Not just X, but Y" and "It's not about X, it's about Y." The reframe manufactures insight by setting up a false opposition and resolving it in one move. Also flag overuse of "X rather than Y." Rewrite as a direct claim.
 - **False ranges**: "From X to Y" where no real spectrum exists. Cut.
 - **Challenges-and-future-prospects**: "Despite its [good thing], [subject] faces challenges..." followed by vague optimism. Never.
 - **Bolded inline headers on every bullet**: Use sparingly, not mechanically.
 - **Elegant variation**: Don't swap synonyms to avoid repeating a word. Say "Nick" three times rather than "the engineer," "the technical lead," "the key contributor."
+- **Balanced-debate framing**: "While X has its advantages, it also has some disadvantages." Presenting every topic as a two-sided debate is a tell. Take a position or report the facts.
+- **Uniform sentence rhythm**: every sentence landing in the same length range. Vary it. Some thoughts need three words. Some need a full paragraph.
 
 These are context-sensitive patterns. The Python engine does not attempt them because a regex cannot reliably tell signal from noise here.
 
 ## Vague Attributions `[engine + skill]`
 
 "Experts say," "experts agree," "industry reports suggest," "industry observers note," "observers note," "sources say," "critics argue," "many believe," "it is widely believed." Name the source or cut the claim.
+
+## Faux-conversational Bridges `[engine + skill]`
+
+Flag and cut: "here's the thing," "but here's the truth," "at the end of the day," "don't get me wrong," "let's dive in," "let's delve into," "let's examine," "we will explore," "in this section we will."
+
+These bridges simulate spoken candor or announce structure instead of delivering content. State the point directly.
+
+## 2026 Vocabulary Cluster
+
+The vocabulary generation turned over in 2025/2026. Current model output leaks abstract fillers and unearned intensifiers with a LinkedIn flavor.
+
+Bare words `[skill only]` (flag when 2+ appear in the same document, same clustering logic as the AI Vocabulary Cluster above): quietly, shift (as default word for any change), matters, shape (as vague influence verb), land (for message reception), actually, real (as intensifier), earn (attached to abstractions), hold (metaphorical), pull (unnamed forces), compound (as growth default), signal (abstract substitute), the work (vague reverence).
+
+These are common English words; judge them in context. "She spoke quietly" is fine. "Quietly building an empire" is the tell.
+
+Phrase forms `[engine + skill]`: "quietly [verb]ing," "this matters because," "the pull of," "built different," "do the work," "send a signal," "decisions compound."
+
+## Markup Artifacts `[engine + skill]`
+
+Leaked model citation tokens are proof of unedited AI output. Flag and delete: `contentReference`, `oaicite`, `turn0search` style tokens, `[cite:` fragments, `[span_0]` fragments, `grok_card`, `grok_render`, `ppl-ai-file-upload`, `attached_file`.
+
+Emoji used as bullet markers (an emoji starting a line as if it were a list marker) is also flagged. Use standard list markers. Artifacts quoted inside fenced code blocks are not flagged.
 
 ## Per-repo supplements
 

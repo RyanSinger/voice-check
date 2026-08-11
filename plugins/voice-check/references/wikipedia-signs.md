@@ -1,293 +1,270 @@
-# Wikipedia: Signs of AI Writing
+# Wikipedia: Signs of AI Writing (condensed)
 
-Source: https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing
+Snapshot as of 2026-08-11 of https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing, condensed for skill use.
 
-A field guide to writing and formatting conventions typical of AI chatbots like ChatGPT, with real examples from Wikipedia articles and drafts. Originally compiled to help detect undisclosed AI-generated content on Wikipedia, but broadly applicable.
+## Contents
 
-Not all text featuring these indicators is AI-generated — LLMs are trained on human writing, including Wikipedia. This list is descriptive, not prescriptive. These are observations, not rules.
+- Content-level indicators
+- Language patterns
+- Era-dependent vocabulary
+- Formatting and markup tells
+- Citation red flags
+- Stylistic quirks
+- Model-specific signatures
+- False positives to avoid
 
----
-
-## Caveats
-
-### AI detection tools
-
-Don't rely solely on AI content detection tools (GPTZero, etc). They perform better than random chance but have non-trivial error rates. Detectors can be fooled by text modifications (paraphrasing, spacing changes) and models not seen during detector training.
-
-### Your own detection ability
-
-Don't rely too much on your own judgment either. A 2025 preprint shows heavy LLM users can correctly identify AI-generated text about 90% of the time — meaning if you tag 10 pages as AI-generated, you've probably falsely accused one editor. People who don't use LLMs much do only slightly better than random chance.
+A field guide to writing and formatting conventions typical of AI chatbots, compiled from real examples found in Wikipedia articles and drafts. Descriptive, not prescriptive. Not all text featuring these indicators is AI generated; LLMs are trained on human writing, including Wikipedia, and human writing itself is increasingly influenced by LLM output.
 
 ---
 
-## Content Signs
+## Content-level indicators
 
 ### Undue emphasis on significance, legacy, and broader trends
 
-**Words to watch:** *stands/serves as, is a testament/reminder, a vital/significant/crucial/pivotal/key role/moment, underscores/highlights its importance, reflects broader, symbolizing its ongoing/enduring/lasting, contributing to the, setting the stage for, marking/shaping the, represents/marks a shift, key turning point, evolving landscape, focal point, indelible mark, deeply rooted...*
+Words to watch: stands as, serves as, is a testament to, is a reminder, a crucial role, a pivotal role, a vital role, a significant role, a key moment, underscores its importance, highlights its significance, reflects broader, symbolizing its ongoing legacy, symbolizing its enduring legacy, contributing to the, setting the stage for, marking the, shaping the, represents a shift, marks a shift, key turning point, evolving landscape, focal point, indelible mark, deeply rooted.
 
-LLM writing puffs up the importance of the subject by adding statements about how arbitrary aspects represent or contribute to some broader topic. There's a distinct repertoire of ways it does this.
+LLM writing inflates the importance of mundane subjects (etymology, population counts, minor institutions) by tying them to broader trends. Example pattern, paraphrased from a 2024 draft about a statistics institute: the article states the institute's founding "marked a pivotal moment" and "represented a significant shift" in regional statistics, language that adds no verifiable content. Biology articles get the same treatment: overemphasized ecosystem connections, belabored conservation status, and references to preservation efforts that do not exist in the sourcing.
 
-Example: "The Statistical Institute of Catalonia was officially established in 1989, **marking a pivotal moment** in the evolution of regional statistics in Spain."
+### Canned emphasis on notability, attribution, and media coverage
 
-LLMs do this even for the most mundane subjects like etymology or population data. Sometimes they add hedging preambles acknowledging the subject is relatively unimportant before talking about its importance anyway.
+Words to watch: independent coverage, local media outlets, regional media outlets, national media outlets, trade publications, profiled in, written by a leading expert, active social media presence, maintains a strong digital presence.
 
-When writing about biology, LLMs over-emphasize connections to the broader ecosystem, belabor conservation status, and reference preservation efforts even when none exist.
+LLMs try to prove notability by listing sources rather than summarizing what those sources say, sometimes attributing analysis to a named outlet that never made the claim. Recent drafts have cited coverage (for example, a claimed ABC News feature) that turned out not to exist at all. Articles about businesses or schools frequently gain a line noting an "active social media presence," which carries no encyclopedic content.
 
-### Undue emphasis on notability, attribution, and media coverage
+### Superficial analyses via tailing clauses
 
-**Words to watch:** *independent coverage, local/regional/national media outlets, profiled in, written by a leading expert, active social media presence*
+Words to watch: highlighting, underscoring, emphasizing, ensuring, reflecting, symbolizing, contributing to, cultivating, fostering, encompassing, enhancing, valuable insights, align with, resonate with.
 
-LLMs act as if the best way to prove a subject is notable is to hit readers over the head with claims of notability, often listing sources without context about what those sources actually said. They may inaccurately attribute their own superficial analyses to named sources.
-
-LLMs painstakingly emphasize sources in body text even for trivial or uncontroversial facts. They often note that subjects "maintain an active social media presence." Sometimes they create entire sections just to assert notability in a list format.
-
-### Superficial analyses
-
-**Words to watch:** *highlighting/underscoring/emphasizing..., ensuring..., reflecting/symbolizing..., contributing to..., cultivating/fostering... (figurative), encompassing..., valuable insights, align/resonate with*
-
-AI chatbots insert superficial analysis of information, often about significance, recognition, or impact. This is usually done by attaching a present participle ("-ing") phrase at the end of sentences, sometimes with vague attributions.
-
-Example: "As of the April 2008 census, the population of Douera stood at approximately 56,998 inhabitants, **creating a lively community within its borders.**"
-
-These are usually synthesis and/or unattributed opinions. Newer chatbots with retrieval-augmented generation may attach these to named sources regardless of whether those sources say anything close.
+The tell is structural: a factual sentence gets a present participle phrase bolted onto the end, asserting significance without a source. A population count becomes a sentence about the town "creating a lively community within its borders." A railway station description gains a clause about it "holding a pivotal place" in regional transit. These tailing clauses are almost always unsourced synthesis; retrieval augmented chatbots sometimes attach them to a named citation that, on inspection, says nothing of the kind.
 
 ### Promotional and advertisement-like language
 
-**Words to watch:** *boasts a, vibrant, rich (figurative), profound, enhancing its, showcasing, exemplifies, commitment to, natural beauty, nestled, in the heart of, groundbreaking (figurative), renowned...*
+Words to watch: boasts a, vibrant, rich (used figuratively), profound, enhancing its, showcasing, exemplifies, commitment to, natural beauty, nestled, in the heart of, groundbreaking (figurative use), renowned, diverse array, featuring.
 
-LLMs have serious problems keeping a neutral tone, especially for anything that could be "cultural heritage" — they constantly remind readers of its importance. This happens even when prompted to use an encyclopedic tone. They also add promotional language to text about companies and products, sounding like a TV commercial transcript.
+LLMs struggle to hold a neutral tone for anything framed as cultural heritage, tourism, or corporate identity, even when explicitly prompted for encyclopedic tone. A representative pattern: a town description opens with the town "nestled" in a "breathtaking" region and "standing as a vibrant town with a rich cultural heritage." Corporate articles pick up similar language: a company's sustainability initiative becomes a "commitment to fostering community development."
 
-Example: "**Nestled** within the **breathtaking** region of Gonder in Ethiopia, Alamata Raya Kobo **stands as a vibrant town with a rich cultural heritage**..."
+### Vague attributions and overgeneralization
 
-### Vague attributions and overgeneralization of opinions
+Words to watch: industry reports, observers have cited, experts argue, some critics argue, several sources (when only one or two are actually cited), such as (introducing what reads as an exhaustive list but is not sourced as one).
 
-**Words to watch:** *Industry reports, Observers have cited, Experts argue, Some critics argue, several sources/publications (when only few cited), such as (before exhaustive lists)...*
+LLMs attribute opinions to unnamed authorities, a weasel wording pattern, and inflate how widely held a view is by citing one or two sources as if they represent consensus.
 
-AI chatbots attribute opinions to vague authorities — weasel wording. They also exaggerate the quantity of sources, presenting views from one or two sources as widely held, or implying lists are non-exhaustive when sources give no such indication.
+### Outline like conclusions about challenges and future prospects
 
-### Outline-like conclusions about challenges and future prospects
+Words to watch: despite its ... faces several challenges, despite these challenges, "Challenges and Legacy" as a heading, "Future Outlook" as a heading.
 
-**Words to watch:** *Despite its... faces several challenges..., Despite these challenges, Challenges and Legacy, Future Outlook...*
+A recurring template: articles end with a section that opens "Despite its [positive traits], [subject] faces challenges," followed by vague, mildly optimistic speculation about future initiatives. This pattern has appeared across subjects as different as economic law, urban development, and technology drafts, always with the same rigid shape.
 
-Many LLM-generated articles include a "Challenges" section beginning with "Despite its [positive words], [subject] faces challenges..." and ending with a vaguely positive assessment or speculation about how initiatives could help. These usually appear at the end of articles with a rigid outline structure, sometimes with a separate "Future Prospects" section.
+### Leads treating list titles as proper nouns
 
-Example: "**Despite its industrial and residential prosperity, Korattur faces challenges** typical of urban areas..."
+When an LLM generates an article about something that is not a proper name, such as a list, it sometimes introduces the title itself as a standalone entity in the first sentence: "The 'List of songs about Mexico' is a curated compilation of musical works," rather than describing the subject the list covers.
 
-### Leads treating article titles as proper nouns
+### Vague see also sections and generic linking
 
-When generating articles about topics that aren't proper names (like lists), the first sentence may introduce the title as if it were a standalone real-world entity.
-
-Example: "**The 'List of songs about Mexico' is a curated compilation** of musical works..."
-
-### Vague see-also sections
-
-LLMs fill see-also sections with broad, generic terms. An article about a startup might link to "Financial technology." Entries may link to non-existent articles.
+LLMs fill "See also" sections with broad, generic terms loosely related to the topic (a startup article linking to "Financial technology") and occasionally link to articles that do not exist.
 
 ---
 
-## Language and Grammar Signs
+## Language patterns
 
-### Overused "AI vocabulary" words
+### Overused AI vocabulary
 
-**Words to watch:** *Additionally (especially beginning sentences), align with, crucial, delve (pre-2025), emphasizing, enduring, enhance, fostering, garner, highlight (as verb), interplay, intricate/intricacies, key (as adjective), landscape (abstract noun), pivotal, showcase, tapestry (abstract noun), testament, underscore (as verb), valuable, vibrant*
+Studies show specific words spiked in frequency across written English after the 2022 release of ChatGPT, and these words tend to co occur: an edit with one is more likely to have several more. One or two instances may be coincidental; a cluster is one of the strongest available tells. See Era dependent vocabulary below for the words themselves and how the list has shifted over time.
 
-Studies show LLMs overuse specific words that appeared far more frequently in text after 2023. They often co-occur — where there's one, there are likely others. The distribution varies by chatbot and changes over time ("delve" was famously overused by ChatGPT in 2023-2024, then dropped sharply in 2025). One or two may be coincidental, but an edit introducing lots of them is one of the strongest tells.
+### Avoidance of basic copulatives
 
-### Avoidance of basic copulatives ("is"/"are" phrases)
+Words to watch: serves as, stands as, marks, functions as, operates as, represents (in place of "is"), boasts, features, maintains, offers (in place of "has"), refers to.
 
-**Words to watch:** *serves as/stands as/marks/represents [a], boasts/features/offers [a]*
+A 2023 study documented more than a ten percent drop in "is" and "are" usage in academic writing after LLM adoption; Wikipedia edits show a similar pattern once lead paragraph conventions are controlled for. This shows up clearly in AI assisted copyedits: "is LAAA's exhibition arm" becomes "serves as LAAA's exhibition space"; "is the first" becomes "holds the distinction of being."
 
-LLM-generated text substitutes constructions like "serves as a" for simpler "is." One study documented over 10% decrease in "is" and "are" usage in academic writing in 2023. This is particularly visible in AI copyedits, which "improve" text this way.
+### Contrast reframes (negative parallelisms)
 
-### Negative parallelisms
+Three related constructions, all used to make a claim sound more balanced or insightful than it is:
 
-Parallel constructions involving "not," "but," or "however" — like "Not only... but..." or "It is not just about..., it's..." — are common in LLM writing to appear balanced and thoughtful. Also constructions that explicitly negate primary properties: "not..., it's..." or "no..., no..., just..."
+Not just X, but also Y: for example, a sentence recast as "not only dismissive but also unnecessarily harsh," or "isn't just sourcing, it's framing."
+
+Not X, but Y: a more absolute version, such as "not grounded in visual mastery, but in [claim]," or a chained form like "not a mirror but a portal, not a representation of self, but a mechanism."
+
+X rather than Y: associated particularly with Grok output, for example a sentence describing a historical actor as "prioritizing empirical consolidation of power amid fragmented loyalties rather than ideological purity."
+
+All three patterns explicitly negate a simpler framing before asserting a more complex one, a rhetorical move that reads as insight but usually adds nothing sourced.
 
 ### Rule of three
 
-LLMs overuse the rule of three: "adjective, adjective, adjective" or "short phrase, short phrase, and short phrase." They use this to make superficial analyses appear more comprehensive.
-
-Example: "The event features **keynote sessions, panel discussions, and networking opportunities**."
+LLMs default to three item lists, either as adjectives or short parallel phrases, to make an analysis feel more thorough than it is: "the event features keynote sessions, panel discussions, and networking opportunities" is a representative shape, regardless of subject.
 
 ### Elegant variation
 
-Generative AI has a repetition-penalty code that discourages reusing words. Output might give a character's name then repeatedly use different synonyms (protagonist, key player, eponymous character). This creates stilted, unnatural variation.
+A repetition penalty built into generation makes models avoid reusing a word, so a subject's name gets replaced across a paragraph with synonyms (protagonist, key player, eponymous figure, or, for a person, repeated descriptive epithets instead of a pronoun). The result reads as stilted rather than varied.
 
 ### False ranges
 
-LLMs like using "from... to..." constructions figuratively, but often the endpoints are loosely related or unrelated things with no meaningful scale between them. They do this because such language is used in persuasive writing to impress, and LLMs are heavily influenced by persuasive writing training data.
-
-Example: "From problem-solving and tool-making **to** scientific discovery, artistic expression, and technological innovation" — no coherent scale exists between these endpoints.
+LLMs like the "from X to Y" construction for rhetorical effect, but the two ends are often only loosely related, with no real scale connecting them: "from problem solving and tool making to scientific discovery, artistic expression, and technological innovation" names four unrelated domains, not a spectrum.
 
 ---
 
-## Style Signs
+## Era-dependent vocabulary
 
-### Title case
+The specific words that spike vary by model generation and shift over time as chatbot providers tune output and public awareness of earlier tells grows. Treat these as approximate windows, not hard cutoffs.
 
-In section headings, AI chatbots strongly capitalize all main words.
+2023 to mid-2024 (GPT-4 era): delve, intricate, intricacies, pivotal, testament, additionally (especially opening a sentence), boasts, bolstered, crucial, emphasizing, enduring, garner, interplay, key (as an adjective), landscape (as an abstract noun), meticulous, meticulously, tapestry (as an abstract noun), underscore (as a verb), valuable, vibrant. "Delve" is the signature word of this window: heavily overused through 2023 and early 2024, then it declined through the rest of 2024 and dropped sharply in 2025.
+
+Mid-2024 to mid-2025 (GPT-4o era): align with, enhance, fostering, showcasing, plus continuing use of bolstered, crucial, emphasizing, enduring, highlighting, pivotal, underscore, vibrant. GPT-4o output in this window reads as more subtly positive than GPT-4, avoiding the most obviously superlative claims while keeping the same vocabulary skew.
+
+Mid-2025 onward (GPT-5 era and later): emphasizing, enhance, highlighting, showcasing remain common, alongside a newer cluster built around quietly, shift, matters, and signal, for example a subject "quietly" gaining relevance, a development that "signals" a shift, or a claim that something "matters" without specifying to whom or why. This cluster compounds the same way earlier ones did: seeing one of these words raises the likelihood of finding the others nearby. Caveat: this quietly/shift/matters/signal cluster comes from secondary 2026 reporting on AI writing tells, not from the Wikipedia article this file snapshots, so treat it as unconfirmed against the source page until a later snapshot corroborates it directly.
+
+Model divergence in this window: Grok output continues to overuse causal, empirical, and correlate, and keeps a heavier reliance on underscore than other current models.
+
+Historical, largely obsolete: didactic disclaimers from 2022 through 2024 such as "it's important to note," "it's crucial to remember," and "it's worth noting"; a "Conclusion" section restating the article's main points; occasional prompt refusals with apologies; abrupt generation cutoffs requiring a "continue" prompt. These are now rare in production output but still worth recognizing in older edits.
+
+---
+
+## Formatting and markup tells
+
+### Title case headings
+
+AI chatbots capitalize every main word in section headings, a convention from marketing and slide decks rather than encyclopedic style.
 
 ### Overuse of boldface
 
-AI chatbots display phrases in boldface for emphasis in an excessive, mechanical manner — emphasizing every instance of a chosen word or phrase in a "key takeaways" fashion. Inherited from readmes, fan wikis, how-tos, sales pitches, slide decks, and listicles.
+Phrases get bolded mechanically and repeatedly, in a "key takeaways" style inherited from readmes, listicles, and sales pitches, rather than for genuine emphasis.
 
-### Inline-header vertical lists
+### Inline header vertical lists
 
-AI output often includes vertical lists where each item has a boldfaced inline header followed by a colon and descriptive text. Instead of proper formatting, bullets may appear as bullet characters (•), hyphens, en dashes, hash symbols, or emoji.
+Bulleted lists where each item opens with a bolded short header followed by a colon and a sentence of description. Bullet characters themselves are sometimes rendered as a dot character, a hash symbol, or an emoji instead of proper wikitext markup.
 
-### Emoji
+### Emoji as formatting
 
-AI chatbots often use emoji, particularly decorating section headings or bullet points by placing emoji in front of them.
-
-### Overuse of em dashes
-
-LLM output uses em dashes (—) more often than nonprofessional human-written text, and in places where humans would use commas, parentheses, colons, or hyphens. LLMs use them in a formulaic way, often mimicking "punched up" sales-like writing. Most useful when combined with other indicators.
+Emoji placed in front of section headings or list items as decoration rather than content.
 
 ### Unusual use of tables
 
-AIs create unnecessary small tables that could be better represented as prose.
+Small tables built for information that reads more naturally as prose, a habit carried over from chat interface formatting.
 
 ### Curly quotation marks and apostrophes
 
-ChatGPT and DeepSeek use curly quotation marks ("...") instead of straight ones ("..."), and curly apostrophes. They may do this inconsistently. Note: Gemini and Claude typically don't use curly quotes. Microsoft Word and macOS/iOS also have smart quotes features.
+ChatGPT and DeepSeek output curly quotation marks and curly apostrophes, sometimes inconsistently within the same passage. Gemini and Claude typically do not exhibit this. Note that Microsoft Word and macOS or iOS autocorrect also introduce curly quotes, so this is weak evidence alone.
 
-### Subject lines
+### Skipped heading levels and stray thematic breaks
 
-AI-generated messages sometimes begin with text intended for a subject field, like "Subject: Request for Permission to Edit Wikipedia Article."
+AI generated wikitext sometimes jumps from a top level heading straight to a sub sub heading, skipping a level, and sometimes inserts a horizontal rule before a heading where none is conventional.
 
----
+### Markdown instead of wikitext
 
-## Communication Signs (meant for the user, not the article)
+Asterisks for bold or italic instead of wikitext's quote marks, hash symbols for headings instead of equals signs, square bracket free parenthetical links instead of wikitext's bracket syntax. Mixed Markdown and wikitext in the same edit is a strong tell; Markdown alone is weaker evidence, since technical writers and developers use it routinely outside Wikipedia.
 
-### Collaborative communication
+### Broken wikitext and hallucinated markup
 
-**Words to watch:** *I hope this helps, Of course!, Certainly!, You're absolutely right!, Would you like..., is there anything else, let me know, more detailed breakdown, here is a...*
+Faulty wikitext syntax, especially in AfC submission templates, plus references to categories and templates that sound plausible but do not exist, showing up as red links.
 
-Editors sometimes paste text from a chatbot that was meant as correspondence or advice rather than content. Chatbots may explicitly state the text is meant for Wikipedia and mention various policies in output.
+### Subject lines and placeholder text
 
-### Knowledge-cutoff disclaimers
-
-**Words to watch:** *as of [date], Up to my last training update, While specific details are limited/scarce..., not widely available/documented/disclosed, based on available information*
-
-LLMs output disclaimers about their information potentially being incomplete. If an LLM can't find sources, it often states information is "not documented" and speculates about what that information "likely" may be — this is entirely speculative. When unknown info is about a person's personal life, the disclaimer often claims they "maintain a low profile" or "keep personal details private."
-
-### Phrasal templates and placeholder text
-
-AI may generate fill-in-the-blank templates that users forget to fill in. Examples: "[Describe the specific section...]", "PASTE_SPOTIFY_TRACK_URL_HERE", placeholder dates like "2025-XX-XX."
+Pasted chatbot output that begins with a leftover "Subject:" line intended for an email field, and fill in the blank placeholders users forgot to replace, such as bracketed instructions or a literal placeholder date string.
 
 ---
 
-## Markup Signs
+## Citation red flags
 
-### Use of Markdown
+### Broken external links with no archive history
 
-LLMs default to Markdown instead of wikitext (Wikipedia's markup). They use asterisks for bold/italic instead of single quotes, hash symbols for headings instead of equals signs, parentheses around URLs instead of square brackets. Mixed Markdown and wikitext is a strong indicator. However, Markdown alone isn't conclusive — developers and technical writers use it routinely.
-
-### Broken wikitext
-
-AI chatbots produce faulty wikitext syntax since they're not proficient in it. Particularly common with AfC submission templates.
-
-### turn0search0
-
-ChatGPT may include "citeturn0search0" at sentence ends, with incrementing numbers. These are placeholder citations from ChatGPT's interface that weren't properly converted. First observed February 2025.
-
-### Reference markup bugs: contentReference, oaicite, oai_citation
-
-Due to bugs, ChatGPT may add code like "contentReference[oaicite:0]{index=0}" in place of references. DeepSeek Grok may add XML-styled grok_card tags. These are strong indicators of specific AI tool usage.
-
-### Non-existent categories and templates
-
-LLMs hallucinate non-existent categories and templates, sometimes for generic concepts that seem like plausible titles. These appear as red links.
-
----
-
-## Citation Signs
-
-### Broken external links
-
-If a new article has multiple citations with broken links not found in web archives, it's a strong sign of AI generation. Most links break over time, but never having worked is different.
+A new article whose citations link to pages that were never archived anywhere is a strong sign, distinct from ordinary link rot, where a page existed and later went offline.
 
 ### Invalid DOIs and ISBNs
 
-Checksums can verify ISBNs. Unresolvable DOIs and invalid ISBNs indicate hallucinated references.
+ISBNs carry a checksum that can be verified directly; DOIs that fail to resolve, or that resolve to an unrelated paper, indicate a hallucinated or mismatched reference.
 
-### Outdated access-dates
+### Outdated access dates
 
-Citations may include access-dates unexpectedly old relative to when the edit was made. If many citations share the same old access-date, it's a sign.
+Access dates noticeably older than the edit date, especially when many citations in the same edit share one implausible date.
 
-### DOIs that lead to unrelated articles
+### Book citations without page numbers or verifiable URLs
 
-LLMs generate references to non-existent scholarly articles with DOIs that appear valid but are assigned to unrelated articles.
+The cited book may be real and topically relevant, but without a page number the claim cannot be checked; some citations include a page number, but the cited page does not actually support the text.
 
-### Book citations without page numbers or URLs
+### Malformed reference syntax
 
-LLMs generate book citations without page numbers. The book may exist and be topically relevant, but without page numbers the citation is unverifiable. Some include page numbers but the cited pages don't verify the text.
+Incorrect syntax for reusing a named reference, footnote style characters left in running text, and PMIDs attached to sources that do not match the numbers cited.
 
-### Incorrect reference syntax
+### Tracking parameters revealing chatbot involvement
 
-AI tools make incorrect attempts at reference formatting — wrong syntax for reusing references, irrelevant sources with PMIDs that happen to match generated numbers, footnote indicators like "↩" characters.
-
-### utm_source parameters
-
-ChatGPT adds "utm_source=openai" or "utm_source=chatgpt.com" to URLs. Microsoft Copilot adds "utm_source=copilot.com." Grok uses "referrer=grok.com." Note: this proves chatbot involvement in finding the citation but not necessarily that the writing was generated.
+utm_source=openai and utm_source=chatgpt.com from ChatGPT, utm_source=copilot.com from Microsoft Copilot, referrer=grok.com from Grok. These confirm a chatbot was used to find the source, not necessarily that the prose was AI written.
 
 ---
 
-## Miscellaneous Signs
+## Stylistic quirks
+
+### Collaborative phrasing meant for the user, not the article
+
+Words to watch: I hope this helps, of course, certainly, you're absolutely right, would you like, is there anything else, let me know, here is a more detailed breakdown.
+
+Occasionally an editor pastes chatbot correspondence directly into an article or talk page instead of the intended content.
+
+### Knowledge cutoff disclaimers
+
+Words to watch: as of [date], up to my last training update, while specific details are limited, not widely documented, based on available information.
+
+When an LLM cannot find sourcing, it tends to state that information is "not documented" and then speculate about what it "likely" is anyway, which is unsourced guessing dressed as caution. For biographical gaps specifically, the disclaimer often becomes a claim that the person "maintains a low profile" or "keeps personal details private."
 
 ### Sudden shift in writing style
 
-Unexpectedly flawless grammar compared to an editor's other communication. A mismatch of user location and English variety (e.g., an Indian writer using American English for an Indian topic — LLMs default to American English).
+Unexpectedly polished grammar relative to an editor's usual communication, or a mismatch between an editor's apparent location and the English variety used in the text, since LLMs default to American English regardless of the topic's regional context.
 
-### Overwhelmingly verbose edit summaries
+### Overwordy edit summaries
 
-AI-generated edit summaries are unusually long, written as formal first-person paragraphs without abbreviations, and conspicuously itemize conventions.
+AI generated edit summaries run unusually long, written as formal first person paragraphs without the abbreviations experienced editors use, and itemize every convention followed.
 
-### Pre-placed maintenance templates
+### Pre placed maintenance templates
 
-LLMs sometimes create drafts that already include review templates set to "declined" or include maintenance tags and protection templates that shouldn't be there.
-
----
-
-## Signs of Human Writing
-
-### Age of text relative to ChatGPT launch
-
-ChatGPT launched November 30, 2022. Text added before this date was almost certainly not AI-generated.
-
-### Ability to explain editorial choices
-
-Editors should be able to explain why they made an edit or mistake. If someone can supply the correct link and explain a mix-up as human error, that points to an ordinary mistake.
+Drafts that arrive already containing a review template marked declined, or protection and maintenance tags that would not normally be added by the submitting editor.
 
 ---
 
-## Ineffective Indicators (Things that DON'T reliably indicate AI)
+## Model-specific signatures
 
-- **Perfect grammar** — Many editors are skilled writers or come from professional writing backgrounds.
-- **Mixed casual and formal registers** — May indicate someone technical, young, playful, or neurodivergent. Or just multiple editors.
-- **"Bland" or "robotic" prose** — Modern LLMs actually tend toward effusive and verbose, not bland.
-- **"Fancy," academic, or unusual words** — LLMs favor certain words but the correlation doesn't extend to all sophisticated prose. Low-frequency and unusual words are actually less likely in AI writing.
-- **Letter-like writing (in isolation)** — Letters have been written formally long before LLMs.
-- **Conjunctions (in isolation)** — LLMs overuse connecting words but so does essay-like human writing.
-- **Bizarre wikitext** — Random-seeming errors are more likely from browser extensions or editing tool bugs than AI.
+Leaked interface artifacts are the strongest tell in this whole guide: they prove a specific tool touched the text, though not necessarily that every sentence around them is AI generated.
+
+ChatGPT: leftover reference markup such as contentReference, oaicite, and oai_citation tags; incrementing placeholder citations like turn0search0; an attributableIndex field occasionally leaking into text; tracking parameters utm_source=openai and utm_source=chatgpt.com. Stylistically, GPT-4 output reads as more blatantly, obviously positive; GPT-4o is more subtly positive and avoids the most superlative phrasing while keeping similar vocabulary.
+
+Gemini: bracketed citation fragments such as a cite marker followed by a number, and span tags like a span_ prefixed identifier paired with a start_span marker, both leftovers from Gemini's internal citation format.
+
+Grok: XML style grok_card tags and the longer grok_render_citation_card_json artifact; the tracking parameter referrer=grok.com; heavy, sustained overuse of causal, empirical, correlate, and underscore, more pronounced than in other current models; the "X rather than Y" contrast construction appears disproportionately in Grok output, including in Grokipedia generated text.
+
+Perplexity: leftover upload artifacts such as ppl-ai-file-upload and attached_file references that belong to its file handling interface, not to article content.
+
+DeepSeek: curly quotation marks and curly apostrophes similar to ChatGPT's, plus occasional lenticular brackets and dagger symbols leaking from its citation formatting.
+
+Microsoft Copilot: tracking parameter utm_source=copilot.com on cited URLs.
+
+Claude and Gemini are both noted as generally not producing the curly quote pattern common to ChatGPT and DeepSeek; no leaked interface tokens specific to Claude have been documented as of this snapshot.
 
 ---
 
-## Historical Indicators (less common in newer models)
+## False positives to avoid
 
-### Didactic disclaimers (2022-2024)
+### Detection tools are not reliable on their own
 
-Older LLMs added disclaimers like "it's important/critical/crucial to note/remember/consider" and "worth noting." Safety-related advice to imagined readers, disambiguation of topics varying by jurisdiction.
+Automated detectors such as GPTZero and Pangram perform better than random chance but carry a non trivial error rate, and a high detector score alone is not grounds for deletion or accusation.
 
-### Section summaries
+### Human judgment is also unreliable
 
-Older LLMs added sections titled "Conclusion" and restated core ideas at the end of paragraphs.
+A 2025 study found that people without heavy LLM exposure distinguish AI text from human text little better than random chance; one study of a specific test population found roughly 57 percent accuracy identifying AI text and 64 percent identifying human text. Heavy LLM users fare better, around 90 percent accuracy, which still means roughly one in ten accusations from an experienced reviewer will be wrong. Human writing itself has grown more LLM influenced since 2024, which narrows this gap further over time.
 
-### Prompt refusal
+### Signs that do not reliably indicate AI writing
 
-Chatbots occasionally declined prompts with apologies and reminders that they are AI language models. Increasingly rare.
+Perfect grammar: many editors are professional or highly skilled writers independent of any AI use.
 
-### Abrupt cutoffs
+Mixed casual and formal registers within one piece: consistent with a technical, young, playful, or neurodivergent writer, or simply multiple editors touching the same page.
 
-AI tools used to stop generating content after hitting a token limit, requiring users to select "continue generating."
+Bland or robotic prose: modern LLMs actually trend toward effusive, verbose output, not flat or bland prose, so flatness alone points away from AI rather than toward it.
+
+Sophisticated or unusual vocabulary in general: LLMs favor a specific, narrow set of words, not sophistication broadly; genuinely rare or low frequency words are, if anything, less likely in AI writing.
+
+Letter-like writing on its own: formal letter conventions predate LLMs by centuries.
+
+Conjunctions on their own: essay style human writing overuses connectives too.
+
+Bizarre or broken wikitext in isolation: more often explained by a browser extension or editing tool bug than by AI generation.
+
+### Signs that do support human authorship
+
+Text added before ChatGPT's public launch on November 30, 2022 is essentially certain to be human written. An editor who can explain why they made a specific edit, including admitting an honest mistake, is behaving like an ordinary human contributor regardless of prose style.

@@ -62,3 +62,28 @@ Before/after examples for each rule category. Use these to calibrate when fixing
 
 - BEFORE: "Industry observers note that this approach is gaining traction."
 - AFTER: "Stripe's engineering blog described this approach in February. Linear and Vercel adopted it the same month."
+
+## Faux-conversational bridges
+
+- BEFORE: "Here's the thing, at the end of the day the migration was worth it."
+- AFTER: "The migration was worth it. Query time dropped 80 percent."
+
+## 2026 vocabulary
+
+- BEFORE: "We're quietly building something that actually matters, and the gains compound."
+- AFTER: "We're building a billing system. It cut invoice errors from 40 a month to 2."
+
+## Markup artifacts
+
+- BEFORE: "The study confirms the trend. :contentReference[oaicite:0]{index=0}"
+- AFTER: "The study confirms the trend (Smith et al., 2025)."
+
+## Contrast reframes
+
+- BEFORE: "It's not about the tooling, it's about the culture."
+- AFTER: "Culture drove the change. The tooling stayed the same."
+
+## Balanced-debate framing
+
+- BEFORE: "While microservices offer flexibility, they also introduce complexity."
+- AFTER: "Microservices cost us two weeks of debugging distributed traces. We went back to the monolith."

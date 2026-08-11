@@ -344,3 +344,149 @@ def test_supplement_load_rows_parses_all_kinds(tmp_path):
     kinds = sorted({r["kind"] for r in rows})
     assert kinds == ["phrase", "regex", "word"]
     assert all(r["name"].startswith("supplement:") for r in rows)
+
+
+# ---------------------------------------------------------------------------
+# 2026 refresh: faux-conversational bridges
+# ---------------------------------------------------------------------------
+
+def test_bridge_phrase_flagged(tmp_path):
+    f = tmp_path / "dirty.md"
+    f.write_text("Here's the thing, the rollout slipped because staging was down.\n")
+    findings = voice_check.scan(f)
+    bridges = [x for x in findings if x["rule"] == "bridge_phrases"]
+    assert len(bridges) >= 1
+
+
+def test_bridge_section_opener_flagged(tmp_path):
+    f = tmp_path / "dirty.md"
+    f.write_text("In this section, we cover the deployment pipeline.\n")
+    findings = voice_check.scan(f)
+    bridges = [x for x in findings if x["rule"] == "bridge_phrases"]
+    assert len(bridges) >= 1
+
+
+def test_bridge_phrase_not_flagged_on_similar_words(tmp_path):
+    f = tmp_path / "clean.md"
+    f.write_text("He got me wrong. The day shift ends at five.\n")
+    findings = voice_check.scan(f)
+    bridges = [x for x in findings if x["rule"] == "bridge_phrases"]
+    assert bridges == []
+
+
+def test_bridge_phrase_curly_apostrophe_flagged(tmp_path):
+    f = tmp_path / "dirty.md"
+    f.write_text("Here’s the thing, the rollout slipped.\n")
+    findings = voice_check.scan(f)
+    bridges = [x for x in findings if x["rule"] == "bridge_phrases"]
+    assert len(bridges) >= 1
+
+
+def test_bridge_end_of_day_shift_not_flagged(tmp_path):
+    f = tmp_path / "clean.md"
+    f.write_text("We clock out at the end of the day shift.\n")
+    findings = voice_check.scan(f)
+    bridges = [x for x in findings if x["rule"] == "bridge_phrases"]
+    assert bridges == []
+
+
+def test_bridge_end_of_the_day_flagged(tmp_path):
+    f = tmp_path / "dirty.md"
+    f.write_text("At the end of the day, the migration was worth it.\n")
+    findings = voice_check.scan(f)
+    bridges = [x for x in findings if x["rule"] == "bridge_phrases"]
+    assert len(bridges) >= 1
+
+
+# ---------------------------------------------------------------------------
+# 2026 refresh: new vocabulary generation (phrase-level only in the engine)
+# ---------------------------------------------------------------------------
+
+def test_vocab_2026_phrase_flagged(tmp_path):
+    f = tmp_path / "dirty.md"
+    f.write_text("Great founders are built different, and their decisions compound.\n")
+    findings = voice_check.scan(f)
+    vocab = [x for x in findings if x["rule"] == "vocab_2026"]
+    assert len(vocab) >= 1
+
+
+def test_vocab_2026_quietly_gerund_flagged(tmp_path):
+    f = tmp_path / "dirty.md"
+    f.write_text("The team is quietly building a replacement for the old stack.\n")
+    findings = voice_check.scan(f)
+    vocab = [x for x in findings if x["rule"] == "vocab_2026"]
+    assert len(vocab) >= 1
+
+
+def test_vocab_2026_send_signal_flagged(tmp_path):
+    f = tmp_path / "dirty.md"
+    f.write_text("Shipping on Friday sends a signal to the whole org.\n")
+    findings = voice_check.scan(f)
+    vocab = [x for x in findings if x["rule"] == "vocab_2026"]
+    assert len(vocab) >= 1
+
+
+def test_vocab_2026_not_flagged_on_plain_use(tmp_path):
+    f = tmp_path / "clean.md"
+    f.write_text("She spoke quietly during the review. Interest compounds monthly.\n")
+    findings = voice_check.scan(f)
+    vocab = [x for x in findings if x["rule"] == "vocab_2026"]
+    assert vocab == []
+
+
+# ---------------------------------------------------------------------------
+# 2026 refresh: leaked model markup artifacts
+# ---------------------------------------------------------------------------
+
+def test_markup_artifact_token_flagged(tmp_path):
+    f = tmp_path / "dirty.md"
+    f.write_text("The study backs this claim. :contentReference[oaicite:0]{index=0}\n")
+    findings = voice_check.scan(f)
+    artifacts = [x for x in findings if x["rule"] == "markup_artifacts"]
+    assert len(artifacts) >= 1
+
+
+def test_markup_artifact_gemini_cite_flagged(tmp_path):
+    f = tmp_path / "dirty.md"
+    f.write_text("Revenue grew 40 percent last year. [cite: 3]\n")
+    findings = voice_check.scan(f)
+    artifacts = [x for x in findings if x["rule"] == "markup_artifacts"]
+    assert len(artifacts) >= 1
+
+
+def test_markup_artifact_in_code_fence_not_flagged(tmp_path):
+    f = tmp_path / "quoting.md"
+    f.write_text(
+        "Example of a leaked token:\n"
+        "\n"
+        "```\n"
+        ":contentReference[oaicite:0]{index=0}\n"
+        "```\n"
+    )
+    findings = voice_check.scan(f)
+    artifacts = [x for x in findings if x["rule"] == "markup_artifacts"]
+    assert artifacts == []
+
+
+def test_emoji_bullet_flagged(tmp_path):
+    f = tmp_path / "dirty.md"
+    f.write_text("\U0001F680 Ship the feature\n")
+    findings = voice_check.scan(f)
+    artifacts = [x for x in findings if x["rule"] == "markup_artifacts"]
+    assert len(artifacts) >= 1
+
+
+def test_emoji_midline_not_flagged(tmp_path):
+    f = tmp_path / "clean.md"
+    f.write_text("We shipped the feature \U0001F680 and moved on.\n")
+    findings = voice_check.scan(f)
+    artifacts = [x for x in findings if x["rule"] == "markup_artifacts"]
+    assert artifacts == []
+
+
+def test_star_emoji_bullet_flagged(tmp_path):
+    f = tmp_path / "dirty.md"
+    f.write_text("⭐ Ship the feature\n")
+    findings = voice_check.scan(f)
+    artifacts = [x for x in findings if x["rule"] == "markup_artifacts"]
+    assert len(artifacts) >= 1
