@@ -198,7 +198,6 @@ RULES: List[dict] = [
         for p in [
             "here's the thing",
             "but here's the truth",
-            "at the end of the day",
             "don't get me wrong",
             "let's dive in",
             "let's delve into",
@@ -212,6 +211,14 @@ RULES: List[dict] = [
         "kind": "regex",
         "pattern": r"\bin this section,?\s+we\b",
         "message": "Faux-conversational bridge: 'in this section we'. Cut the meta commentary.",
+        "scope": "line",
+    },
+    {
+        "name": "bridge_phrases",
+        "category": "bridge_phrases",
+        "kind": "regex",
+        "pattern": r"\bat the end of the day\b(?!\s+shift\b)",
+        "message": "Faux-conversational bridge: 'at the end of the day'. Cut it or state the point directly.",
         "scope": "line",
     },
 
@@ -270,7 +277,7 @@ RULES: List[dict] = [
         "name": "markup_artifacts",
         "category": "markup_artifacts",
         "kind": "regex",
-        "pattern": r"^\s*[☀-➿\U0001F300-\U0001FAFF]️?\s+",
+        "pattern": r"^\s*[☀-➿⬀-⯿\U0001F300-\U0001FAFF]️?\s+",
         "message": "Emoji used as a bullet marker. Use standard list markers.",
         "scope": "line",
     },
@@ -344,10 +351,15 @@ def _prepare_line_for_rules(line: str) -> str:
     replace stripped characters with spaces so that column positions remain
     aligned with the original line (callers still snippet the raw line).
     """
+    # Normalize curly apostrophe (U+2019) to a straight apostrophe so
+    # apostrophe-bearing phrases match either form. Same length, so column
+    # positions stay aligned with the original line.
+    out = line.replace("’", "'")
+
     # Replace inline code spans with same-length runs of spaces
     def _blank(m: re.Match) -> str:
         return " " * (m.end() - m.start())
-    out = _INLINE_CODE_RE.sub(_blank, line)
+    out = _INLINE_CODE_RE.sub(_blank, out)
 
     # Strip the leading bullet marker (turn "  - foo" into "    foo")
     bm = _BULLET_RE.match(out)

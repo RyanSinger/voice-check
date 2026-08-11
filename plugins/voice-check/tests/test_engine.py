@@ -360,7 +360,7 @@ def test_bridge_phrase_flagged(tmp_path):
 
 def test_bridge_section_opener_flagged(tmp_path):
     f = tmp_path / "dirty.md"
-    f.write_text("In this section, we will explore the deployment pipeline.\n")
+    f.write_text("In this section, we cover the deployment pipeline.\n")
     findings = voice_check.scan(f)
     bridges = [x for x in findings if x["rule"] == "bridge_phrases"]
     assert len(bridges) >= 1
@@ -372,6 +372,30 @@ def test_bridge_phrase_not_flagged_on_similar_words(tmp_path):
     findings = voice_check.scan(f)
     bridges = [x for x in findings if x["rule"] == "bridge_phrases"]
     assert bridges == []
+
+
+def test_bridge_phrase_curly_apostrophe_flagged(tmp_path):
+    f = tmp_path / "dirty.md"
+    f.write_text("Here’s the thing, the rollout slipped.\n")
+    findings = voice_check.scan(f)
+    bridges = [x for x in findings if x["rule"] == "bridge_phrases"]
+    assert len(bridges) >= 1
+
+
+def test_bridge_end_of_day_shift_not_flagged(tmp_path):
+    f = tmp_path / "clean.md"
+    f.write_text("We clock out at the end of the day shift.\n")
+    findings = voice_check.scan(f)
+    bridges = [x for x in findings if x["rule"] == "bridge_phrases"]
+    assert bridges == []
+
+
+def test_bridge_end_of_the_day_flagged(tmp_path):
+    f = tmp_path / "dirty.md"
+    f.write_text("At the end of the day, the migration was worth it.\n")
+    findings = voice_check.scan(f)
+    bridges = [x for x in findings if x["rule"] == "bridge_phrases"]
+    assert len(bridges) >= 1
 
 
 # ---------------------------------------------------------------------------
@@ -458,3 +482,11 @@ def test_emoji_midline_not_flagged(tmp_path):
     findings = voice_check.scan(f)
     artifacts = [x for x in findings if x["rule"] == "markup_artifacts"]
     assert artifacts == []
+
+
+def test_star_emoji_bullet_flagged(tmp_path):
+    f = tmp_path / "dirty.md"
+    f.write_text("⭐ Ship the feature\n")
+    findings = voice_check.scan(f)
+    artifacts = [x for x in findings if x["rule"] == "markup_artifacts"]
+    assert len(artifacts) >= 1
