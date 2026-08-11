@@ -20,7 +20,7 @@ Important: the engine duplicates a subset of the markdown rules as code. When ad
 
 ### Hook installation flow
 
-`templates/pre-commit.sh` contains a `__VOICE_CHECK_ENGINE__` placeholder. `templates/install-hook.sh` substitutes the absolute path to `engine/voice_check.py` inside the installed plugin cache and writes a marked section (`# === voice-check section start/end ===`) into the target repo's `.git/hooks/pre-commit`. The installer is idempotent and appends rather than overwriting. After upgrading the plugin, users must re-run `install-hook.sh` in each repo because the cached engine path changes.
+`templates/pre-commit.sh` contains a `__VOICE_CHECK_ENGINE__` placeholder. `templates/install-hook.sh` substitutes the absolute path to `engine/voice_check.py` inside the installed plugin cache and writes a marked section (`# === voice-check section start/end ===`) into the target repo's `.git/hooks/pre-commit`. The installer is idempotent and appends rather than overwriting. Installed hooks self-heal across upgrades: the hook re-resolves the engine from the newest plugin cache version at commit time, and the plugin's SessionStart hook (`hooks/heal-hook.sh`, registered in `hooks/hooks.json`) rewrites stale pre-2.2.1 hook sections the first time a Claude Code session starts in that repo. Re-running `install-hook.sh` stays harmless but is no longer needed.
 
 ### Marketplace structure
 

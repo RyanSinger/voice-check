@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
 # Install the voice-check pre-commit hook into a git repo.
 # Resolves the absolute path to the voice-check engine in the plugin cache
-# at install time and embeds it into the per-repo hook. Re-run after
-# upgrading the voice-check plugin so the hook picks up the new version path.
+# at install time and embeds it as the hook's fast path. Installed hooks
+# self-heal: they re-resolve the engine at commit time after upgrades, and
+# the plugin's SessionStart healer rewrites stale pre-2.2.1 hook sections.
+# Re-running this installer is always safe (idempotent) but no longer
+# required after upgrades.
 #
 # Usage: install-hook.sh [/path/to/repo]
 # If no path given, uses the current directory.
