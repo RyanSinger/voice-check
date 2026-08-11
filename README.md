@@ -17,6 +17,9 @@ Rules tagged **[engine]** run in the Python pre-commit hook engine. Rules tagged
 - **Promotional tone [engine]:** "boasts," "nestled in the heart of," "vibrant," "showcasing," "commitment to"
 - **Dangling participles [engine]:** comma followed by gerund phrases like "...highlighting the importance of," "...ensuring that," "...fostering growth"
 - **Vague attributions [engine]:** "experts say," "experts agree," "industry observers note," "sources say," "many believe"
+- **Faux-conversational bridges [engine]:** "here's the thing," "at the end of the day," "let's dive in," "we will explore"
+- **2026 vocabulary [engine for phrases, skill for bare words]:** "quietly building," "this matters because," "built different," "decisions compound"; bare words (quietly, shift, matters, signal, compound) are judged in context by the skill
+- **Markup artifacts [engine]:** leaked citation tokens (contentReference, oaicite, [cite:, grok_card, ppl-ai-file-upload), emoji used as bullet markers
 - **Structural tells [skill]:** rule of three, negative parallelism, false ranges, challenges-and-future-prospects, elegant variation
 
 The full rule list is in `plugins/voice-check/references/rules.md`.
@@ -28,9 +31,9 @@ Two skills, two timings:
 1. **`writing-guard` (proactive).** Loads before Claude produces prose. Reads the rules and self-censors as it drafts. No file required.
 2. **`voice-check` (reactive).** Scans an existing file. Two modes:
    - Manual `/voice-check <file>` — auto-fixes in place
-   - Git pre-commit hook — fast Python rules engine, report-only, advisory
+   - Git pre-commit hook: fast Python rules engine, report-only, advisory
 
-The Python engine handles deterministic rules (dashes, vocabulary cluster, puffery, promotional tone, hedging, copula avoidance, dangling participles, vague attributions) at hook speed via a single data-driven rule table. The Claude-loaded skill handles context-sensitive patterns (structural tells, elegant variation, rule of three) when invoked manually.
+The Python engine handles deterministic rules (dashes, vocabulary cluster, puffery, promotional tone, hedging, copula avoidance, dangling participles, vague attributions, bridge phrases, 2026 vocabulary phrases, markup artifacts) at hook speed via a single data-driven rule table. The Claude-loaded skill handles context-sensitive patterns (structural tells, elegant variation, rule of three) when invoked manually.
 
 ## Layered rules: per-repo supplements
 
