@@ -1,6 +1,6 @@
 {
   "name": "voice-check",
-  "version": "2.2.0",
+  "version": "2.2.1",
   "description": "Two skills that catch AI writing tells: voice-check (reactive scan with git pre-commit hook) and writing-guard (proactive guard before drafting). Includes a Python rules engine and per-repo supplement support.",
   "author": {
     "name": "Ryan Singer"

@@ -72,11 +72,7 @@ To update later:
 claude plugin marketplace update voice-check
 ```
 
-If you have the pre-commit hook installed in any repo, re-run `install-hook.sh` after each upgrade so the hook picks up the new engine path:
-
-```bash
-~/.claude/plugins/cache/voice-check/voice-check/*/templates/install-hook.sh /path/to/your/repo
-```
+Installed hooks self-heal after upgrades: the hook re-resolves the engine from the plugin cache at commit time, and a SessionStart healer repairs hooks installed by versions before 2.2.1 the first time you start a Claude Code session in that repo. Repos where you never open Claude Code keep the old advisory nag until you run `install-hook.sh` there once.
 
 ### Install the git pre-commit hook in a repo
 
@@ -150,7 +146,7 @@ claude plugin marketplace add RyanSinger/voice-check
 claude plugin install voice-check@voice-check
 ```
 
-If you have the pre-commit hook installed in any repos, re-run `install-hook.sh` from the new plugin location to update the embedded engine path.
+Hooks installed by 2.2.1 or later need nothing after upgrades; older hooks are repaired automatically the first time a Claude Code session starts in that repo.
 
 ## License
 
