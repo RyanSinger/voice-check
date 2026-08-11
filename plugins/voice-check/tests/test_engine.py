@@ -571,3 +571,70 @@ def test_hook_advisory_when_no_engine_anywhere(tmp_path):
     result = _run_hook(repo, home)
     assert result.returncode == 0
     assert "engine not found" in result.stdout
+
+
+# ---------------------------------------------------------------------------
+# SessionStart healer tests
+# ---------------------------------------------------------------------------
+
+OLD_STYLE_HOOK = """#!/usr/bin/env bash
+# === voice-check section start ===
+VOICE_CHECK_ENGINE="{engine}"
+if [ ! -f "$VOICE_CHECK_ENGINE" ]; then
+  echo "voice-check: engine not found at $VOICE_CHECK_ENGINE"
+  exit 0
+fi
+exit 0
+# === voice-check section end ===
+"""
+
+
+def _run_healer(cwd, home):
+    return subprocess.run(
+        ["bash", str(HEALER_SCRIPT)],
+        cwd=str(cwd), capture_output=True, text=True,
+        env={**os.environ, "HOME": str(home),
+             "CLAUDE_PLUGIN_ROOT": str(PLUGIN_ROOT)},
+    )
+
+
+def test_healer_replaces_stale_section(tmp_path):
+    home = _make_fake_home(tmp_path, ["2.2.0"])
+    dead = tmp_path / "gone" / "voice_check.py"
+    repo = _make_repo(tmp_path, OLD_STYLE_HOOK.format(engine=dead))
+    result = _run_healer(repo, home)
+    assert result.returncode == 0
+    assert "healed" in result.stdout
+    hook = repo / ".git" / "hooks" / "pre-commit"
+    text = hook.read_text()
+    assert "resolve_engine" in text
+    assert os.access(hook, os.X_OK)
+
+
+def test_healer_noop_when_baked_path_healthy(tmp_path):
+    home = _make_fake_home(tmp_path, ["2.2.0"])
+    live = (home / ".claude" / "plugins" / "cache" / "voice-check"
+            / "voice-check" / "2.2.0" / "engine" / "voice_check.py")
+    repo = _make_repo(tmp_path, OLD_STYLE_HOOK.format(engine=live))
+    before = (repo / ".git" / "hooks" / "pre-commit").read_bytes()
+    result = _run_healer(repo, home)
+    assert result.returncode == 0
+    assert "healed" not in result.stdout
+    assert (repo / ".git" / "hooks" / "pre-commit").read_bytes() == before
+
+
+def test_healer_noop_without_marker(tmp_path):
+    home = _make_fake_home(tmp_path, ["2.2.0"])
+    repo = _make_repo(tmp_path, "#!/bin/sh\nexit 0\n")
+    before = (repo / ".git" / "hooks" / "pre-commit").read_bytes()
+    result = _run_healer(repo, home)
+    assert result.returncode == 0
+    assert (repo / ".git" / "hooks" / "pre-commit").read_bytes() == before
+
+
+def test_healer_noop_outside_git_repo(tmp_path):
+    home = _make_fake_home(tmp_path, ["2.2.0"])
+    plain = tmp_path / "plain"
+    plain.mkdir()
+    result = _run_healer(plain, home)
+    assert result.returncode == 0
