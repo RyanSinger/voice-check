@@ -78,7 +78,7 @@ Installed hooks self-heal after upgrades: the hook re-resolves the engine from t
 
 ```bash
 cd /path/to/your/repo
-~/.claude/plugins/cache/voice-check/voice-check/*/templates/install-hook.sh
+bash "$(ls ~/.claude/plugins/cache/voice-check/voice-check/*/templates/install-hook.sh | sort -V | tail -1)"
 ```
 
 The installer is idempotent. If a pre-commit hook already exists, it appends a marked voice-check section rather than overwriting. To uninstall, delete the section between `# === voice-check section start ===` and `# === voice-check section end ===` from `.git/hooks/pre-commit`.
@@ -130,7 +130,7 @@ plugins/
       pre-commit.sh             Git hook template (with placeholder)
       install-hook.sh           Per-repo hook installer
     tests/
-      test_engine.py            pytest suite (15 tests)
+      test_engine.py            pytest suite
       fixtures/                 Sample clean and dirty markdown files
 README.md
 LICENSE
