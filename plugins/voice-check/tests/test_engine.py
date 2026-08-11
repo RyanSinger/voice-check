@@ -344,3 +344,31 @@ def test_supplement_load_rows_parses_all_kinds(tmp_path):
     kinds = sorted({r["kind"] for r in rows})
     assert kinds == ["phrase", "regex", "word"]
     assert all(r["name"].startswith("supplement:") for r in rows)
+
+
+# ---------------------------------------------------------------------------
+# 2026 refresh: faux-conversational bridges
+# ---------------------------------------------------------------------------
+
+def test_bridge_phrase_flagged(tmp_path):
+    f = tmp_path / "dirty.md"
+    f.write_text("Here's the thing, the rollout slipped because staging was down.\n")
+    findings = voice_check.scan(f)
+    bridges = [x for x in findings if x["rule"] == "bridge_phrases"]
+    assert len(bridges) >= 1
+
+
+def test_bridge_section_opener_flagged(tmp_path):
+    f = tmp_path / "dirty.md"
+    f.write_text("In this section, we will explore the deployment pipeline.\n")
+    findings = voice_check.scan(f)
+    bridges = [x for x in findings if x["rule"] == "bridge_phrases"]
+    assert len(bridges) >= 1
+
+
+def test_bridge_phrase_not_flagged_on_similar_words(tmp_path):
+    f = tmp_path / "clean.md"
+    f.write_text("He got me wrong. The day shift ends at five.\n")
+    findings = voice_check.scan(f)
+    bridges = [x for x in findings if x["rule"] == "bridge_phrases"]
+    assert bridges == []

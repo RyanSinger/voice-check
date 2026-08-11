@@ -184,6 +184,36 @@ RULES: List[dict] = [
             "valuable", "vibrant", "leveraging", "leverage",
         ]
     ],
+
+    # -- faux-conversational bridges (2026 refresh) -------------------------
+    *[
+        {
+            "name": "bridge_phrases",
+            "category": "bridge_phrases",
+            "kind": "phrase",
+            "pattern": p,
+            "message": f"Faux-conversational bridge: '{p}'. Cut it or state the point directly.",
+            "scope": "line",
+        }
+        for p in [
+            "here's the thing",
+            "but here's the truth",
+            "at the end of the day",
+            "don't get me wrong",
+            "let's dive in",
+            "let's delve into",
+            "we will explore",
+            "let's examine",
+        ]
+    ],
+    {
+        "name": "bridge_phrases",
+        "category": "bridge_phrases",
+        "kind": "regex",
+        "pattern": r"\bin this section,?\s+we\b",
+        "message": "Faux-conversational bridge: 'in this section we'. Cut the meta commentary.",
+        "scope": "line",
+    },
 ]
 
 

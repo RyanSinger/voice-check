@@ -57,6 +57,12 @@ These are context-sensitive patterns. The Python engine does not attempt them be
 
 "Experts say," "experts agree," "industry reports suggest," "industry observers note," "observers note," "sources say," "critics argue," "many believe," "it is widely believed." Name the source or cut the claim.
 
+## Faux-conversational Bridges `[engine + skill]`
+
+Flag and cut: "here's the thing," "but here's the truth," "at the end of the day," "don't get me wrong," "let's dive in," "let's delve into," "let's examine," "we will explore," "in this section we will."
+
+These bridges simulate spoken candor or announce structure instead of delivering content. State the point directly.
+
 ## Per-repo supplements
 
 In addition to the rules above, the engine loads extra rows from a per-repo `.claude/voice-check.md` supplement file. Authors add banned words, phrases, or regex patterns by embedding fenced code blocks with one of these info strings:
