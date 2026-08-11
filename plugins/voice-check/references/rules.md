@@ -4,8 +4,8 @@ This is the single source of truth for the writing rules used by both the `voice
 
 Each rule is marked with a tag:
 
-- `[engine + skill]` — enforced by the Python rules engine at pre-commit hook speed AND by the Claude-loaded skills.
-- `[skill only]` — only enforced by the Claude-loaded skills. The Python engine does not attempt this because it depends on context the regex engine cannot reliably see.
+- `[engine + skill]`: enforced by the Python rules engine at pre-commit hook speed AND by the Claude-loaded skills.
+- `[skill only]`: only enforced by the Claude-loaded skills. The Python engine does not attempt this because it depends on context the regex engine cannot reliably see.
 
 ## Hard Rules (fix all violations, no exceptions)
 
