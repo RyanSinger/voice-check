@@ -547,7 +547,7 @@ def _run_hook(repo, home):
 
 def _stage_dirty_md(repo):
     doc = repo / "dirty.md"
-    doc.write_text("The plan is simple — ship it.\n")
+    doc.write_text("The plan is simple \u2014 ship it.\n")
     subprocess.run(["git", "-C", str(repo), "add", "dirty.md"], check=True)
 
 
