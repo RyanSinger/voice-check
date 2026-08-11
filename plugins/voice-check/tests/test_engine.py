@@ -372,3 +372,39 @@ def test_bridge_phrase_not_flagged_on_similar_words(tmp_path):
     findings = voice_check.scan(f)
     bridges = [x for x in findings if x["rule"] == "bridge_phrases"]
     assert bridges == []
+
+
+# ---------------------------------------------------------------------------
+# 2026 refresh: new vocabulary generation (phrase-level only in the engine)
+# ---------------------------------------------------------------------------
+
+def test_vocab_2026_phrase_flagged(tmp_path):
+    f = tmp_path / "dirty.md"
+    f.write_text("Great founders are built different, and their decisions compound.\n")
+    findings = voice_check.scan(f)
+    vocab = [x for x in findings if x["rule"] == "vocab_2026"]
+    assert len(vocab) >= 1
+
+
+def test_vocab_2026_quietly_gerund_flagged(tmp_path):
+    f = tmp_path / "dirty.md"
+    f.write_text("The team is quietly building a replacement for the old stack.\n")
+    findings = voice_check.scan(f)
+    vocab = [x for x in findings if x["rule"] == "vocab_2026"]
+    assert len(vocab) >= 1
+
+
+def test_vocab_2026_send_signal_flagged(tmp_path):
+    f = tmp_path / "dirty.md"
+    f.write_text("Shipping on Friday sends a signal to the whole org.\n")
+    findings = voice_check.scan(f)
+    vocab = [x for x in findings if x["rule"] == "vocab_2026"]
+    assert len(vocab) >= 1
+
+
+def test_vocab_2026_not_flagged_on_plain_use(tmp_path):
+    f = tmp_path / "clean.md"
+    f.write_text("She spoke quietly during the review. Interest compounds monthly.\n")
+    findings = voice_check.scan(f)
+    vocab = [x for x in findings if x["rule"] == "vocab_2026"]
+    assert vocab == []

@@ -63,6 +63,16 @@ Flag and cut: "here's the thing," "but here's the truth," "at the end of the day
 
 These bridges simulate spoken candor or announce structure instead of delivering content. State the point directly.
 
+## 2026 Vocabulary Cluster
+
+The vocabulary generation turned over in 2025/2026. Current model output leaks abstract fillers and unearned intensifiers with a LinkedIn flavor.
+
+Bare words `[skill only]` (flag when 2+ appear in the same document, same clustering logic as the AI Vocabulary Cluster above): quietly, shift (as default word for any change), matters, shape (as vague influence verb), land (for message reception), actually, real (as intensifier), earn (attached to abstractions), hold (metaphorical), pull (unnamed forces), compound (as growth default), signal (abstract substitute), the work (vague reverence).
+
+These are common English words; judge them in context. "She spoke quietly" is fine. "Quietly building an empire" is the tell.
+
+Phrase forms `[engine + skill]`: "quietly [verb]ing," "this matters because," "the pull of," "built different," "do the work," "send a signal," "decisions compound."
+
 ## Per-repo supplements
 
 In addition to the rules above, the engine loads extra rows from a per-repo `.claude/voice-check.md` supplement file. Authors add banned words, phrases, or regex patterns by embedding fenced code blocks with one of these info strings:

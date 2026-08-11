@@ -214,6 +214,44 @@ RULES: List[dict] = [
         "message": "Faux-conversational bridge: 'in this section we'. Cut the meta commentary.",
         "scope": "line",
     },
+
+    # -- 2026 vocabulary cluster, phrase-level only -------------------------
+    # Bare words (quietly, shift, signal, compound...) are too common for
+    # word-boundary matching; those are skill-only. See references/rules.md.
+    *[
+        {
+            "name": "vocab_2026",
+            "category": "vocab_2026",
+            "kind": "phrase",
+            "pattern": p,
+            "message": f"2026 AI vocabulary: '{p}'. Replace with something concrete.",
+            "scope": "line",
+        }
+        for p in [
+            "this matters because",
+            "the pull of",
+            "built different",
+            "do the work",
+            "decisions compound",
+        ]
+    ],
+    {
+        "name": "vocab_2026",
+        "category": "vocab_2026",
+        "kind": "regex",
+        # Stop list keeps non-gerund "ing" words (during, morning...) from firing.
+        "pattern": r"\bquietly\s+(?!(?:during|morning|evening|something|anything|everything|nothing)\b)\w+ing\b",
+        "message": "2026 AI vocabulary: 'quietly [verb]ing'. Name the action plainly.",
+        "scope": "line",
+    },
+    {
+        "name": "vocab_2026",
+        "category": "vocab_2026",
+        "kind": "regex",
+        "pattern": r"\bsends?\s+(?:a|the)\s+signal\b",
+        "message": "2026 AI vocabulary: 'send a signal'. Say what actually happens.",
+        "scope": "line",
+    },
 ]
 
 
