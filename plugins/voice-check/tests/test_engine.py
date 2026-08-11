@@ -638,3 +638,69 @@ def test_healer_noop_outside_git_repo(tmp_path):
     plain.mkdir()
     result = _run_healer(plain, home)
     assert result.returncode == 0
+
+
+# ---------------------------------------------------------------------------
+# Worktree support: installer and healer resolve the shared hooks dir
+# ---------------------------------------------------------------------------
+
+_GIT_IDENTITY = {
+    "GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@t.invalid",
+    "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@t.invalid",
+}
+
+
+def _add_worktree(repo, tmp_path):
+    """Commit once (worktree add needs a HEAD), then add a linked worktree."""
+    subprocess.run(
+        ["git", "-C", str(repo), "commit", "--allow-empty", "-m", "init", "-q"],
+        check=True, env={**os.environ, **_GIT_IDENTITY},
+    )
+    wt = tmp_path / "wt"
+    subprocess.run(
+        ["git", "-C", str(repo), "worktree", "add", "-q", str(wt)],
+        check=True, env={**os.environ, **_GIT_IDENTITY},
+    )
+    return wt
+
+
+def test_installer_from_worktree_writes_shared_hook(tmp_path):
+    home = _make_fake_home(tmp_path, ["2.2.0"])
+    repo = _make_repo(tmp_path)
+    wt = _add_worktree(repo, tmp_path)
+    installer = PLUGIN_ROOT / "templates" / "install-hook.sh"
+    result = subprocess.run(
+        ["bash", str(installer), str(wt)],
+        capture_output=True, text=True,
+        env={**os.environ, "HOME": str(home)},
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    hook = repo / ".git" / "hooks" / "pre-commit"
+    assert hook.exists()
+    assert "voice-check section start" in hook.read_text()
+    assert os.access(hook, os.X_OK)
+
+
+def test_healer_heals_from_worktree(tmp_path):
+    home = _make_fake_home(tmp_path, ["2.2.0"])
+    dead = tmp_path / "gone" / "voice_check.py"
+    repo = _make_repo(tmp_path, OLD_STYLE_HOOK.format(engine=dead))
+    wt = _add_worktree(repo, tmp_path)
+    result = _run_healer(wt, home)
+    assert result.returncode == 0
+    assert "healed" in result.stdout
+    text = (repo / ".git" / "hooks" / "pre-commit").read_text()
+    assert "resolve_engine" in text
+
+
+def test_healer_heals_from_main_checkout_subdir(tmp_path):
+    home = _make_fake_home(tmp_path, ["2.2.0"])
+    dead = tmp_path / "gone" / "voice_check.py"
+    repo = _make_repo(tmp_path, OLD_STYLE_HOOK.format(engine=dead))
+    sub = repo / "docs"
+    sub.mkdir()
+    result = _run_healer(sub, home)
+    assert result.returncode == 0
+    assert "healed" in result.stdout
+    text = (repo / ".git" / "hooks" / "pre-commit").read_text()
+    assert "resolve_engine" in text

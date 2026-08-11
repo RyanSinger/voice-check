@@ -10,10 +10,14 @@ MARKER="# === voice-check section start ==="
 
 REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0
 [ -n "$REPO_ROOT" ] || exit 0
-# The installer only supports normal checkouts (.git directory).
-[ -d "$REPO_ROOT/.git" ] || exit 0
 
-HOOK="$REPO_ROOT/.git/hooks/pre-commit"
+# Hooks live in the common git dir, shared by every linked worktree.
+GIT_COMMON=$(git rev-parse --git-common-dir 2>/dev/null) || exit 0
+case "$GIT_COMMON" in
+  /*) ;;
+  *) GIT_COMMON="$(pwd)/$GIT_COMMON" ;;
+esac
+HOOK="$GIT_COMMON/hooks/pre-commit"
 [ -f "$HOOK" ] || exit 0
 grep -qF "$MARKER" "$HOOK" || exit 0
 

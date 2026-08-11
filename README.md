@@ -72,13 +72,13 @@ To update later:
 claude plugin marketplace update voice-check
 ```
 
-Installed hooks self-heal after upgrades: the hook re-resolves the engine from the plugin cache at commit time, and a SessionStart healer repairs hooks installed by versions before 2.2.1 the first time you start a Claude Code session in that repo. Repos where you never open Claude Code keep the old advisory nag until you run `install-hook.sh` there once.
+Installed hooks self-heal after upgrades: the hook re-resolves the engine from the plugin cache at commit time, and a SessionStart healer repairs hooks installed by versions before 2.2.1 the first time you start a Claude Code session in that repo. Repos where you never open Claude Code keep the old advisory nag until you run `install-hook.sh` there once. Both the installer and the healer also work from linked git worktrees; the hook lands in the shared hooks directory of the main checkout.
 
 ### Install the git pre-commit hook in a repo
 
 ```bash
 cd /path/to/your/repo
-~/.claude/plugins/cache/voice-check/voice-check/*/templates/install-hook.sh
+bash "$(ls ~/.claude/plugins/cache/voice-check/voice-check/*/templates/install-hook.sh | sort -V | tail -1)"
 ```
 
 The installer is idempotent. If a pre-commit hook already exists, it appends a marked voice-check section rather than overwriting. To uninstall, delete the section between `# === voice-check section start ===` and `# === voice-check section end ===` from `.git/hooks/pre-commit`.
@@ -87,7 +87,7 @@ The hook is **advisory only**, it never blocks commits. Findings print to stderr
 
 ## Run the tests
 
-The Python engine has a 15-test pytest suite. To run it:
+The Python engine has a pytest suite. To run it:
 
 ```bash
 cd ~/.claude/plugins/cache/voice-check/voice-check/*
@@ -130,7 +130,7 @@ plugins/
       pre-commit.sh             Git hook template (with placeholder)
       install-hook.sh           Per-repo hook installer
     tests/
-      test_engine.py            pytest suite (15 tests)
+      test_engine.py            pytest suite
       fixtures/                 Sample clean and dirty markdown files
 README.md
 LICENSE
