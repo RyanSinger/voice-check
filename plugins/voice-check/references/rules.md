@@ -45,11 +45,13 @@ Write neutral, not like ad copy.
 ## Structural Tells `[skill only]`
 
 - **Rule of three**: Don't default to "X, Y, and Z" triads. Break the pattern.
-- **Negative parallelisms**: "Not just X, but Y" and "It's not about X, it's about Y." Overused. Rewrite.
+- **Negative parallelisms and contrast reframes**: "Not just X, but Y" and "It's not about X, it's about Y." The reframe manufactures insight by setting up a false opposition and resolving it in one move. Also flag overuse of "X rather than Y." Rewrite as a direct claim.
 - **False ranges**: "From X to Y" where no real spectrum exists. Cut.
 - **Challenges-and-future-prospects**: "Despite its [good thing], [subject] faces challenges..." followed by vague optimism. Never.
 - **Bolded inline headers on every bullet**: Use sparingly, not mechanically.
 - **Elegant variation**: Don't swap synonyms to avoid repeating a word. Say "Nick" three times rather than "the engineer," "the technical lead," "the key contributor."
+- **Balanced-debate framing**: "While X has its advantages, it also has some disadvantages." Presenting every topic as a two-sided debate is a tell. Take a position or report the facts.
+- **Uniform sentence rhythm**: every sentence landing in the same length range. Vary it. Some thoughts need three words. Some need a full paragraph.
 
 These are context-sensitive patterns. The Python engine does not attempt them because a regex cannot reliably tell signal from noise here.
 
