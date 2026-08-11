@@ -490,3 +490,84 @@ def test_star_emoji_bullet_flagged(tmp_path):
     findings = voice_check.scan(f)
     artifacts = [x for x in findings if x["rule"] == "markup_artifacts"]
     assert len(artifacts) >= 1
+
+
+# ---------------------------------------------------------------------------
+# Hook self-healing: template runtime resolution + SessionStart healer
+# ---------------------------------------------------------------------------
+
+import os
+import stat
+
+PLUGIN_ROOT = Path(__file__).parent.parent
+HOOK_TEMPLATE = PLUGIN_ROOT / "templates" / "pre-commit.sh"
+HEALER_SCRIPT = PLUGIN_ROOT / "hooks" / "heal-hook.sh"
+ENGINE_SRC_DIR = PLUGIN_ROOT / "engine"
+
+
+def _make_fake_home(tmp_path, versions):
+    """Build a fake HOME containing a plugin cache with the given versions."""
+    home = tmp_path / "home"
+    for v in versions:
+        dst = (home / ".claude" / "plugins" / "cache" / "voice-check"
+               / "voice-check" / v / "engine")
+        dst.mkdir(parents=True)
+        for f in ENGINE_SRC_DIR.glob("*.py"):
+            (dst / f.name).write_text(f.read_text())
+    home.mkdir(exist_ok=True)
+    return home
+
+
+def _make_repo(tmp_path, hook_text=None):
+    """Init a git repo; optionally install pre-commit hook content."""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    subprocess.run(["git", "init", "-q", str(repo)], check=True)
+    if hook_text is not None:
+        hooks_dir = repo / ".git" / "hooks"
+        hooks_dir.mkdir(exist_ok=True)
+        hook = hooks_dir / "pre-commit"
+        hook.write_text(hook_text)
+        hook.chmod(hook.stat().st_mode | stat.S_IXUSR)
+    return repo
+
+
+def _render_hook(engine_path):
+    return HOOK_TEMPLATE.read_text().replace(
+        "__VOICE_CHECK_ENGINE__", str(engine_path))
+
+
+def _run_hook(repo, home):
+    return subprocess.run(
+        ["bash", str(repo / ".git" / "hooks" / "pre-commit")],
+        cwd=str(repo), capture_output=True, text=True,
+        env={**os.environ, "HOME": str(home)},
+    )
+
+
+def _stage_dirty_md(repo):
+    doc = repo / "dirty.md"
+    doc.write_text("The plan is simple — ship it.\n")
+    subprocess.run(["git", "-C", str(repo), "add", "dirty.md"], check=True)
+
+
+def test_hook_resolves_newest_cache_when_baked_path_dead(tmp_path):
+    home = _make_fake_home(tmp_path, ["2.1.0", "2.2.0"])
+    dead = tmp_path / "gone" / "voice_check.py"
+    repo = _make_repo(tmp_path, _render_hook(dead))
+    _stage_dirty_md(repo)
+    result = _run_hook(repo, home)
+    assert result.returncode == 0
+    assert "no_dashes" in result.stdout
+    assert "engine not found" not in result.stdout
+
+
+def test_hook_advisory_when_no_engine_anywhere(tmp_path):
+    home = tmp_path / "home"
+    home.mkdir()
+    dead = tmp_path / "gone" / "voice_check.py"
+    repo = _make_repo(tmp_path, _render_hook(dead))
+    _stage_dirty_md(repo)
+    result = _run_hook(repo, home)
+    assert result.returncode == 0
+    assert "engine not found" in result.stdout

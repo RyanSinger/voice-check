@@ -5,11 +5,36 @@
 
 set -e
 
-VOICE_CHECK_ENGINE="__VOICE_CHECK_ENGINE__"
+# Baked at install time; fast path while it remains valid. If a plugin
+# upgrade moves the cache directory, resolve_engine falls back to the
+# newest installed version at commit time, so the hook self-heals.
+BAKED_ENGINE="__VOICE_CHECK_ENGINE__"
 
-if [ ! -f "$VOICE_CHECK_ENGINE" ]; then
-  echo "voice-check: engine not found at $VOICE_CHECK_ENGINE"
-  echo "voice-check: re-run install-hook.sh after upgrading the plugin"
+resolve_engine() {
+  if [ -n "${VOICE_CHECK_ENGINE:-}" ] && [ -f "${VOICE_CHECK_ENGINE:-}" ]; then
+    echo "$VOICE_CHECK_ENGINE"
+    return
+  fi
+  if [ -f "$BAKED_ENGINE" ]; then
+    echo "$BAKED_ENGINE"
+    return
+  fi
+  newest=$(find "$HOME/.claude/plugins/cache/voice-check" -path "*/engine/voice_check.py" 2>/dev/null | sort -V | tail -1)
+  if [ -n "$newest" ]; then
+    echo "$newest"
+    return
+  fi
+  if [ -f "$HOME/.claude/skills/voice-check/engine/voice_check.py" ]; then
+    echo "$HOME/.claude/skills/voice-check/engine/voice_check.py"
+    return
+  fi
+  true
+}
+
+ENGINE="$(resolve_engine)"
+
+if [ -z "$ENGINE" ]; then
+  echo "voice-check: engine not found (is the voice-check plugin installed?), skipping scan"
   exit 0
 fi
 
@@ -29,7 +54,7 @@ while IFS= read -r f; do
   if [ -z "$f" ] || [ ! -f "$f" ]; then
     continue
   fi
-  out=$("$PYTHON" "$VOICE_CHECK_ENGINE" --report-only "$f" 2>&1 || true)
+  out=$("$PYTHON" "$ENGINE" --report-only "$f" 2>&1 || true)
   if [ -n "$out" ]; then
     echo "--- $f ---"
     echo "$out"
