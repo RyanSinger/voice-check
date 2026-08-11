@@ -691,3 +691,16 @@ def test_healer_heals_from_worktree(tmp_path):
     assert "healed" in result.stdout
     text = (repo / ".git" / "hooks" / "pre-commit").read_text()
     assert "resolve_engine" in text
+
+
+def test_healer_heals_from_main_checkout_subdir(tmp_path):
+    home = _make_fake_home(tmp_path, ["2.2.0"])
+    dead = tmp_path / "gone" / "voice_check.py"
+    repo = _make_repo(tmp_path, OLD_STYLE_HOOK.format(engine=dead))
+    sub = repo / "docs"
+    sub.mkdir()
+    result = _run_healer(sub, home)
+    assert result.returncode == 0
+    assert "healed" in result.stdout
+    text = (repo / ".git" / "hooks" / "pre-commit").read_text()
+    assert "resolve_engine" in text

@@ -72,7 +72,7 @@ To update later:
 claude plugin marketplace update voice-check
 ```
 
-Installed hooks self-heal after upgrades: the hook re-resolves the engine from the plugin cache at commit time, and a SessionStart healer repairs hooks installed by versions before 2.2.1 the first time you start a Claude Code session in that repo. Repos where you never open Claude Code keep the old advisory nag until you run `install-hook.sh` there once.
+Installed hooks self-heal after upgrades: the hook re-resolves the engine from the plugin cache at commit time, and a SessionStart healer repairs hooks installed by versions before 2.2.1 the first time you start a Claude Code session in that repo. Repos where you never open Claude Code keep the old advisory nag until you run `install-hook.sh` there once. Both the installer and the healer also work from linked git worktrees; the hook lands in the shared hooks directory of the main checkout.
 
 ### Install the git pre-commit hook in a repo
 
@@ -87,7 +87,7 @@ The hook is **advisory only**, it never blocks commits. Findings print to stderr
 
 ## Run the tests
 
-The Python engine has a 15-test pytest suite. To run it:
+The Python engine has a pytest suite. To run it:
 
 ```bash
 cd ~/.claude/plugins/cache/voice-check/voice-check/*
