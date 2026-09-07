@@ -50,11 +50,36 @@ count=$(echo "$staged_md" | wc -l | tr -d ' ')
 echo "voice-check: scanning $count staged markdown file(s)"
 
 findings_total=0
+
+# Extract the added-line ranges for one staged file from its diff hunks.
+# Prints "12-18,40-41" or nothing. Falls back to nothing on any failure, and
+# an empty result means the whole file is scanned.
+changed_ranges() {
+  git diff --cached -U0 -- "$1" 2>/dev/null | awk '
+    /^@@/ {
+      if (match($0, /\+[0-9]+(,[0-9]+)?/)) {
+        spec = substr($0, RSTART + 1, RLENGTH - 1)
+        split(spec, a, ",")
+        start = a[1]
+        len = (a[2] == "" ? 1 : a[2])
+        if (len > 0) printf "%s-%s,", start, start + len - 1
+      }
+    }
+  ' | sed 's/,$//'
+}
+
 while IFS= read -r f; do
   if [ -z "$f" ] || [ ! -f "$f" ]; then
     continue
   fi
-  out=$("$PYTHON" "$ENGINE" --report-only "$f" 2>&1 || true)
+
+  ranges=$(changed_ranges "$f")
+  if [ -n "$ranges" ]; then
+    out=$("$PYTHON" "$ENGINE" --report-only --lines "$ranges" "$f" 2>&1 || true)
+  else
+    out=$("$PYTHON" "$ENGINE" --report-only "$f" 2>&1 || true)
+  fi
+
   if [ -n "$out" ]; then
     echo "--- $f ---"
     echo "$out"

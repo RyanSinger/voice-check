@@ -267,3 +267,39 @@ def test_hook_runtime_silent_on_clean_file(fresh_repo, fake_home):
     assert "advisory only" not in combined, (
         f"clean file should not trigger advisory footer:\n{combined}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Diff scoping
+# ---------------------------------------------------------------------------
+
+def test_hook_reports_only_on_changed_lines(fresh_repo, fake_home):
+    """A pre-existing violation elsewhere in the file must stay quiet."""
+    _run_installer(fresh_repo, fake_home)
+
+    _stage_file(fresh_repo, "doc.md", "old line with an em dash — here\nsecond line\n")
+    subprocess.run(
+        ["git", "-C", str(fresh_repo), "commit", "-q", "-m", "seed", "--no-verify"],
+        check=True,
+        env=_git_env(),
+    )
+
+    # Touch only the second line, introducing a fresh violation there.
+    _stage_file(
+        fresh_repo,
+        "doc.md",
+        "old line with an em dash — here\nsecond line — changed\n",
+    )
+
+    out = _run_hook(fresh_repo)
+    assert out.returncode == 0, "hook must never block a commit"
+    combined = out.stdout + out.stderr
+    assert "line 2" in combined
+    assert "line 1" not in combined
+
+
+def test_hook_still_exits_zero_on_a_clean_staged_file(fresh_repo, fake_home):
+    _run_installer(fresh_repo, fake_home)
+    _stage_file(fresh_repo, "doc.md", "clean prose here\n")
+    out = _run_hook(fresh_repo)
+    assert out.returncode == 0
