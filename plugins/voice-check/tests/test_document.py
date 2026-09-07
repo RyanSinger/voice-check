@@ -156,3 +156,67 @@ def test_document_doc_scope_input_excludes_inline_code():
 def test_document_keeps_raw_lines_for_snippets():
     doc = document.Document.from_markdown("a `key` b\n")
     assert doc.lines[0] == "a `key` b"
+
+
+def _sups(text):
+    return document.parse_suppressions(text.splitlines())
+
+
+def test_line_ignore_covers_only_its_own_line():
+    s = _sups("a\nb <!-- voice-check: ignore -->\nc\n")
+    assert len(s) == 1
+    assert s[0].covers(2, "puffery", "puffery.groundbreaking")
+    assert not s[0].covers(1, "puffery", "puffery.groundbreaking")
+    assert not s[0].covers(3, "puffery", "puffery.groundbreaking")
+
+
+def test_bare_directive_covers_every_rule():
+    s = _sups("x <!-- voice-check: ignore -->\n")
+    assert s[0].covers(1, "anything", "anything.at_all")
+
+
+def test_directive_with_rule_name_covers_only_that_name():
+    s = _sups("x <!-- voice-check: ignore puffery -->\n")
+    assert s[0].covers(1, "puffery", "puffery.groundbreaking")
+    assert not s[0].covers(1, "hedging", "hedging.would_like_to")
+
+
+def test_directive_with_rule_id_covers_only_that_id():
+    s = _sups("x <!-- voice-check: ignore puffery.crucial -->\n")
+    assert s[0].covers(1, "other", "puffery.crucial")
+    assert not s[0].covers(1, "other", "puffery.groundbreaking")
+
+
+def test_directive_accepts_a_comma_separated_list():
+    s = _sups("x <!-- voice-check: ignore puffery, hedging -->\n")
+    assert s[0].covers(1, "puffery", "p.x")
+    assert s[0].covers(1, "hedging", "h.x")
+    assert not s[0].covers(1, "promotional_tone", "pt.x")
+
+
+def test_disable_enable_pair_covers_the_block():
+    s = _sups(
+        "a\n<!-- voice-check: disable -->\nb\nc\n<!-- voice-check: enable -->\nd\n"
+    )
+    assert len(s) == 1
+    assert s[0].covers(3, "puffery", "puffery.x")
+    assert not s[0].covers(1, "puffery", "puffery.x")
+    assert not s[0].covers(6, "puffery", "puffery.x")
+
+
+def test_unterminated_disable_covers_to_end_of_file():
+    s = _sups("a\n<!-- voice-check: disable -->\nb\nc\n")
+    assert len(s) == 1
+    assert s[0].covers(999999, "puffery", "puffery.x")
+    assert not s[0].covers(1, "puffery", "puffery.x")
+
+
+def test_directive_inside_a_fenced_block_has_no_effect():
+    """rules.md documents this syntax in a fence; the example must be inert."""
+    s = _sups("```\n<!-- voice-check: disable -->\n```\ntext\n")
+    assert s == []
+
+
+def test_document_from_markdown_populates_suppressions():
+    doc = document.Document.from_markdown("x <!-- voice-check: ignore -->\n")
+    assert len(doc.suppressions) == 1

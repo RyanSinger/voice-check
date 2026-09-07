@@ -5,6 +5,7 @@ spaces rather than deleted, so a finding's column still points at the right
 character in the raw line and the raw line can still be quoted as a snippet.
 """
 import re
+import sys
 from dataclasses import dataclass, field
 
 FENCE_RE = re.compile(r"^\s*(```|~~~)")
@@ -127,6 +128,75 @@ def mask_line(line: str) -> str:
     return out
 
 
+DIRECTIVE_RE = re.compile(
+    r"<!--\s*voice-check:\s*(ignore|disable|enable)\b([^>]*?)-->",
+    re.IGNORECASE,
+)
+
+
+@dataclass(frozen=True)
+class Suppression:
+    """A line range in which some or all rules are suppressed.
+
+    An empty `rules` set means every rule is suppressed. Otherwise a rule is
+    suppressed when either its name or its id appears in the set.
+    """
+
+    start: int
+    end: int
+    rules: frozenset
+
+    def covers(self, line: int, rule_name: str, rule_id: str) -> bool:
+        if not (self.start <= line <= self.end):
+            return False
+        if not self.rules:
+            return True
+        return rule_name in self.rules or rule_id in self.rules
+
+
+def _parse_rule_args(raw: str) -> frozenset:
+    """Split a directive's argument list into rule names and ids."""
+    parts = [p.strip() for p in re.split(r"[,\s]+", raw.strip()) if p.strip()]
+    return frozenset(parts)
+
+
+def parse_suppressions(lines):
+    """Read voice-check directives from raw lines, skipping fenced regions.
+
+    Runs on raw text because the masking pass hides HTML comments. Skips
+    fenced blocks so a documented example of the syntax stays inert.
+    """
+    out = []
+    open_disable = None
+    in_fence = False
+
+    for num, line in enumerate(lines, start=1):
+        if FENCE_RE.match(line):
+            in_fence = not in_fence
+            continue
+        if in_fence:
+            continue
+
+        for m in DIRECTIVE_RE.finditer(line):
+            kind = m.group(1).lower()
+            rule_args = _parse_rule_args(m.group(2))
+
+            if kind == "ignore":
+                out.append(Suppression(num, num, rule_args))
+            elif kind == "disable":
+                if open_disable is None:
+                    open_disable = (num, rule_args)
+            elif kind == "enable":
+                if open_disable is not None:
+                    out.append(Suppression(open_disable[0], num, open_disable[1]))
+                    open_disable = None
+
+    if open_disable is not None:
+        out.append(Suppression(open_disable[0], sys.maxsize, open_disable[1]))
+
+    return out
+
+
 @dataclass
 class Document:
     """A file split into raw lines, masked lines, and masked full text."""
@@ -147,5 +217,6 @@ class Document:
             # Built from scan_lines rather than an independent pass, so line
             # scope and doc scope rules always see identical masked text.
             prose_text="\n".join(scan_lines),
-            suppressions=[],
+            # Parsed from raw text, before masking hides the HTML comments.
+            suppressions=parse_suppressions(raw),
         )
