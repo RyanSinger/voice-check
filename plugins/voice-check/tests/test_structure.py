@@ -61,13 +61,27 @@ def test_ordinary_while_clause_stays_silent():
 
 def test_advantages_disadvantages_fires():
     assert "structure.advantages_disadvantages" in _ids(
-        "The framework has clear advantages and some disadvantages.\n"
+        "The framework has clear advantages, but it also has real disadvantages.\n"
     )
 
 
 def test_benefits_alone_stays_silent():
     assert "structure.advantages_disadvantages" not in _ids(
         "The benefits are clear and worth the effort.\n"
+    )
+
+
+def test_advantages_and_disadvantages_without_connective_stays_silent():
+    """Pure lexical co-occurrence is an ordinary pros and cons discussion,
+    not balanced-debate framing. The concessive connective is the tell."""
+    assert "structure.advantages_disadvantages" not in _ids(
+        "The framework has clear advantages and some disadvantages.\n"
+    )
+
+
+def test_neutral_weighing_stays_silent():
+    assert "structure.advantages_disadvantages" not in _ids(
+        "The framework has advantages and disadvantages worth weighing.\n"
     )
 
 
@@ -113,11 +127,13 @@ def test_frames_are_low_severity():
 def test_frame_messages_never_show_a_raw_pattern():
     """Regex rows carry a "term" so the developer never reads a pattern."""
     import rules
+    metacharacters = ["\\b", "(?:", "[^", "\\s"]
     for row in rules.RULES:
         if row["name"] != "structure":
             continue
         assert "term" in row, row["id"]
-        assert "\\b" not in row["message"], row["id"]
+        for meta in metacharacters:
+            assert meta not in row["message"], (row["id"], meta)
 
 
 REPO_ROOT = Path(__file__).parent.parent.parent.parent

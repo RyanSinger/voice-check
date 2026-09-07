@@ -57,6 +57,8 @@ Words to watch: despite its ... faces several challenges, despite these challeng
 
 A recurring template: articles end with a section that opens "Despite its [positive traits], [subject] faces challenges," followed by vague, mildly optimistic speculation about future initiatives. This pattern has appeared across subjects as different as economic law, urban development, and technology drafts, always with the same rigid shape.
 
+<!-- voice-check: enable -->
+
 ### Leads treating list titles as proper nouns
 
 When an LLM generates an article about something that is not a proper name, such as a list, it sometimes introduces the title itself as a standalone entity in the first sentence: "The 'List of songs about Mexico' is a curated compilation of musical works," rather than describing the subject the list covers.
@@ -78,6 +80,8 @@ Studies show specific words spiked in frequency across written English after the
 Words to watch: serves as, stands as, marks, functions as, operates as, represents (in place of "is"), boasts, features, maintains, offers (in place of "has"), refers to.
 
 A 2023 study documented more than a ten percent drop in "is" and "are" usage in academic writing after LLM adoption; Wikipedia edits show a similar pattern once lead paragraph conventions are controlled for. This shows up clearly in AI assisted copyedits: "is LAAA's exhibition arm" becomes "serves as LAAA's exhibition space"; "is the first" becomes "holds the distinction of being."
+
+<!-- voice-check: disable structure -->
 
 ### Contrast reframes (negative parallelisms)
 

@@ -372,9 +372,10 @@ RULES: List[dict] = _finalize([
     # severity, so Phase 1's collapse behavior summarizes them to a single
     # counted line unless the reader asks for detail.
     #
-    # Every row carries "term" because a raw pattern must never reach a
-    # developer's terminal, the same reason ai_vocab_cluster.additionally
-    # carries one.
+    # Every row carries "term" for consistency with the rest of the table and
+    # for any future doc-scope use. None of these six rows are doc-scope
+    # today, so scanner.py's line-scope path uses "message" directly and
+    # never reads "term"; the field costs nothing to carry now.
     *[
         {
             "name": "structure",
@@ -407,8 +408,12 @@ RULES: List[dict] = _finalize([
             ),
             (
                 "advantages_disadvantages",
-                r"\b(?:advantages?|benefits?|strengths?)\b[^.!?\n]{0,60}?\b(?:disadvantages?|drawbacks?|weaknesses?|downsides?)\b",
-                "advantages paired with disadvantages",
+                # Lexical co-occurrence alone fires on an ordinary pros and
+                # cons discussion, which is not the tell. The concessive
+                # connective is what marks balanced-debate framing rather
+                # than a neutral factual statement, so it is required.
+                r"\b(?:advantages?|benefits?|strengths?)\b[^.!?\n]{0,60}?\b(?:but|yet|though|however|also)\b[^.!?\n]{0,40}?\b(?:disadvantages?|drawbacks?|weaknesses?|downsides?)\b",
+                "advantages, but disadvantages",
                 "Balanced-debate framing. Take a position or report the facts.",
             ),
             (

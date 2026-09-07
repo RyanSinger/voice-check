@@ -56,6 +56,8 @@ Before/after examples for each rule category. Use these to calibrate when fixing
 - BEFORE: "Despite its strong adoption, the framework faces challenges, but the team remains optimistic about future growth."
 - AFTER: "Adoption is strong. The team is fixing the slow build problem next quarter."
 
+<!-- voice-check: enable -->
+
 ### Elegant variation
 - BEFORE: "Nick led the project. The engineer brought deep expertise. The technical lead's experience showed."
 - AFTER: "Nick led the project. Nick has deep expertise. It showed."
@@ -79,6 +81,8 @@ Before/after examples for each rule category. Use these to calibrate when fixing
 
 - BEFORE: "The study confirms the trend. :contentReference[oaicite:0]{index=0}"
 - AFTER: "The study confirms the trend (Smith et al., 2025)."
+
+<!-- voice-check: disable structure -->
 
 ## Contrast reframes
 
