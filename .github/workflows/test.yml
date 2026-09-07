@@ -9,11 +9,25 @@ on:
 jobs:
   pytest:
     runs-on: ubuntu-latest
+    strategy:
+      # Report every version's result. A failure on one interpreter should
+      # not hide the state of the others.
+      fail-fast: false
+      matrix:
+        # The full range README and CLAUDE.md declare support for. Testing
+        # only the floor once let a real bug through: annotations are
+        # evaluated eagerly through 3.13 and deferred in 3.14, so an engine
+        # module that failed to import raised NameError from an annotation on
+        # 3.11 while passing on 3.14. CI caught that one because CI was the
+        # older interpreter, but the reverse is worse, since a 3.14 only bug
+        # would pass CI and reach users.
+        python-version: ['3.11', '3.12', '3.13', '3.14']
+    name: pytest (Python ${{ matrix.python-version }})
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: ${{ matrix.python-version }}
       - name: Install pytest
         run: pip install pytest
       - name: Run tests
