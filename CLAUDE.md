@@ -31,6 +31,10 @@ The plugin has three layers that must stay in sync:
    ranges, then runs the analyzer pass: it validates each analyzer's returned
    evidence lines and isolates a raising or malformed analyzer so one bad
    analyzer cannot cost the rule passes or the other analyzers.
+   `scanner.scan` takes a `surface` of `"file"` or `"commit"`, and
+   `in_surface` filters both the rule pass and the analyzer pass against
+   `rules.COMMIT_SURFACE`, an allowlist of rule names safe to run on text
+   that cannot carry a suppression comment.
 
 Rule ids can shift between releases. A supplement that disables or reassigns severity for a stale id (for example, the removed `ai_vocab_cluster.key` or the renamed `ai_vocab_cluster.align`, now `ai_vocab_cluster.align_with`) prints a warning and otherwise has no effect; see `references/rules.md` for current ids.
 
@@ -38,7 +42,7 @@ Important: the engine duplicates a subset of the markdown rules as code. When ad
 
 ### Hook installation flow
 
-`templates/pre-commit.sh` contains a `__VOICE_CHECK_ENGINE__` placeholder. `templates/install-hook.sh` substitutes the absolute path to `engine/voice_check.py` inside the installed plugin cache and writes a marked section (`# === voice-check section start/end ===`) into the target repo's `.git/hooks/pre-commit`. The installer is idempotent and appends rather than overwriting. Installed hooks self-heal across upgrades: the hook re-resolves the engine from the newest plugin cache version at commit time, and the plugin's SessionStart hook (`hooks/heal-hook.sh`, registered in `hooks/hooks.json`) rewrites stale pre-2.2.1 hook sections the first time a Claude Code session starts in that repo. Re-running `install-hook.sh` stays harmless but is no longer needed.
+`templates/pre-commit.sh` and `templates/commit-msg.sh` each contain a `__VOICE_CHECK_ENGINE__` placeholder and a `# voice-check hook version:` stamp. `templates/install-hook.sh` substitutes the absolute path to `engine/voice_check.py` inside the installed plugin cache and writes a marked section (`# === voice-check section start/end ===`) into each hook in `HOOK_NAMES`. The installer is idempotent and appends rather than overwriting. Installed hooks self-heal across upgrades: each re-resolves the engine from the newest plugin cache version at commit time, and the plugin's SessionStart hook (`hooks/heal-hook.sh`, registered in `hooks/hooks.json`) reinstalls both when either one's stamp falls behind `plugin.json`. `HOOK_NAMES` is duplicated in the installer and the healer; the two must agree. Bumping the plugin version without bumping both template stamps strands every install in the field, so `tests/test_hook_pipeline.py` pins them together.
 
 ### Marketplace structure
 
@@ -46,7 +50,7 @@ Important: the engine duplicates a subset of the markdown rules as code. When ad
 
 ## Commands
 
-Run the engine tests (211 pytest cases across `plugins/voice-check/tests/`):
+Run the engine tests (283 pytest cases across `plugins/voice-check/tests/`):
 
 ```bash
 cd plugins/voice-check

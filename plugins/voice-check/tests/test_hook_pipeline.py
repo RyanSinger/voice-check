@@ -478,3 +478,488 @@ def test_healer_noop_when_version_stamp_is_current(tmp_path):
     assert result.returncode == 0
     assert "healed" not in result.stdout
     assert hook.read_bytes() == before
+
+
+# ---------------------------------------------------------------------------
+# The commit-msg hook template
+# ---------------------------------------------------------------------------
+
+COMMIT_MSG_TEMPLATE = TEMPLATES_DIR / "commit-msg.sh"
+
+
+def _run_commit_msg_template(repo: Path, message: str) -> subprocess.CompletedProcess:
+    """Run the raw (unrendered) commit-msg template against a message file.
+
+    The template's placeholder is not substituted here. resolve_engine's
+    first branch reads $VOICE_CHECK_ENGINE, so pointing that at the in-repo
+    engine exercises the real template without an install step.
+    """
+    msg_file = repo / ".git" / "COMMIT_EDITMSG"
+    msg_file.parent.mkdir(parents=True, exist_ok=True)
+    msg_file.write_text(message)
+
+    env = _git_env()
+    env["VOICE_CHECK_PYTHON"] = sys.executable
+    env["VOICE_CHECK_ENGINE"] = str(ENGINE_FILE)
+    return subprocess.run(
+        ["bash", str(COMMIT_MSG_TEMPLATE), str(msg_file)],
+        cwd=str(repo),
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+
+
+def test_commit_msg_template_exists_with_markers_and_placeholder():
+    assert COMMIT_MSG_TEMPLATE.is_file(), f"missing template: {COMMIT_MSG_TEMPLATE}"
+    text = COMMIT_MSG_TEMPLATE.read_text()
+    assert MARKER_START in text
+    assert MARKER_END in text
+    assert "__VOICE_CHECK_ENGINE__" in text
+    assert "# voice-check hook version: " in text
+
+
+def test_commit_msg_reports_an_em_dash(fresh_repo):
+    r = _run_commit_msg_template(fresh_repo, "Fix the parser — nested quotes\n")
+    assert r.returncode == 0
+    combined = r.stdout + r.stderr
+    assert "no_dashes" in combined
+
+
+def test_commit_msg_stays_silent_on_a_clean_message(fresh_repo):
+    r = _run_commit_msg_template(
+        fresh_repo,
+        "fix(engine): thread surface through the scanner\n"
+        "\n"
+        "Commit messages now run a restricted rule set.\n",
+    )
+    assert r.returncode == 0
+    assert (r.stdout + r.stderr).strip() == ""
+
+
+def test_commit_msg_applies_the_allowlist(fresh_repo):
+    """Puffery is not on the commit allowlist; a dash is."""
+    r = _run_commit_msg_template(
+        fresh_repo, "Fix the thing - properly\n\nA groundbreaking change.\n")
+    assert r.returncode == 0
+    combined = r.stdout + r.stderr
+    assert "no_dashes" in combined
+    assert "puffery" not in combined
+
+
+def test_commit_msg_ignores_git_comments_and_the_verbose_diff(fresh_repo):
+    """The case most likely to catch a real bug.
+
+    git stripspace --strip-comments removes the scissors line but leaves the
+    diff beneath it, so the hook must cut at the scissors marker first.
+    Without that cut this message reports an em dash from someone else's code.
+    """
+    message = (
+        "Real message here\n"
+        "\n"
+        "# Please enter the commit message for your changes.\n"
+        "# ------------------------ >8 ------------------------\n"
+        "# Do not modify or remove the line above.\n"
+        "diff --git a/x.md b/x.md\n"
+        "+a line with an em dash — here\n"
+    )
+    r = _run_commit_msg_template(fresh_repo, message)
+    assert r.returncode == 0
+    combined = r.stdout + r.stderr
+    assert "no_dashes" not in combined, (
+        f"verbose diff was scanned:\n{combined}")
+
+
+def test_commit_msg_honors_a_custom_comment_char(fresh_repo):
+    """git config core.commentChar can be any single character, and the
+    scissors line under commit.verbose is built from it, not hardcoded "#".
+    git stripspace --strip-comments already reads this setting; the cut
+    ahead of it must match, or a repo using a different comment character
+    never matches the scissors line and the diff beneath it leaks into the
+    scan.
+    """
+    subprocess.run(
+        ["git", "-C", str(fresh_repo), "config", "core.commentChar", ";"],
+        check=True, env=_git_env(),
+    )
+    message = (
+        "Real message here\n"
+        "\n"
+        "; Please enter the commit message for your changes.\n"
+        "; ------------------------ >8 ------------------------\n"
+        "; Do not modify or remove the line above.\n"
+        "diff --git a/x.md b/x.md\n"
+        "+a line with an em dash — here\n"
+    )
+    r = _run_commit_msg_template(fresh_repo, message)
+    assert r.returncode == 0
+    combined = r.stdout + r.stderr
+    assert "no_dashes" not in combined, (
+        f"verbose diff leaked under a custom comment char:\n{combined}")
+
+
+def test_commit_msg_keeps_the_body_when_there_is_no_scissors_line(fresh_repo):
+    message = (
+        "Subject line\n"
+        "\n"
+        "Body with an em dash — in it.\n"
+        "\n"
+        "# Please enter the commit message for your changes.\n"
+    )
+    r = _run_commit_msg_template(fresh_repo, message)
+    assert r.returncode == 0
+    assert "no_dashes" in (r.stdout + r.stderr)
+
+
+def test_commit_msg_is_silent_on_an_aborted_empty_message(fresh_repo):
+    message = (
+        "\n"
+        "# Please enter the commit message for your changes.\n"
+        "# Aborting commit due to empty commit message.\n"
+    )
+    r = _run_commit_msg_template(fresh_repo, message)
+    assert r.returncode == 0
+    assert (r.stdout + r.stderr).strip() == ""
+
+
+def test_commit_msg_leaves_no_scratch_files_behind(fresh_repo):
+    _run_commit_msg_template(fresh_repo, "Fix the parser — nested quotes\n")
+    root_leftovers = sorted(p.name for p in fresh_repo.glob(".voice-check-*"))
+    git_dir_leftovers = sorted(p.name for p in (fresh_repo / ".git").glob("voice-check-*"))
+    assert root_leftovers == [], f"scratch files left behind at repo root: {root_leftovers}"
+    assert git_dir_leftovers == [], f"scratch files left behind in .git: {git_dir_leftovers}"
+
+
+def test_commit_msg_exit_stays_zero_when_the_trap_cannot_remove_a_scratch_file(fresh_repo):
+    """Pins the critical defect. Under set -e, a failing command in an EXIT
+    trap overrides the status the script was exiting with, so a stray rm
+    failure would turn a correct exit 0 into a nonzero status and block the
+    commit. A directory at the cut file's path is the cheapest way to make
+    plain rm -f fail, since it refuses a directory without -r.
+    """
+    (fresh_repo / ".voice-check-commit-msg.cut").mkdir()
+    r = _run_commit_msg_template(fresh_repo, "Fix the parser — nested quotes\n")
+    assert r.returncode == 0
+
+
+def test_commit_msg_uses_the_linked_worktree_own_config_not_the_main_repo(
+        fresh_repo, tmp_path):
+    """Pins the worktree defect.
+
+    git rev-parse --git-common-dir resolves to the MAIN repository's .git in
+    a linked worktree, so a scratch file placed there walks up to the main
+    checkout and picks up its .claude/voice-check.md instead of the linked
+    worktree's own (absent) supplement. pre-commit.sh scanning a real file in
+    the same worktree would never make that mistake, so the commit-msg hook
+    must not either. The main repo disables no_dashes here; the worktree has
+    no supplement of its own, so an em dash committed from the worktree must
+    still be reported.
+    """
+    (fresh_repo / "README.md").write_text("seed\n")
+
+    env = _git_env()
+    subprocess.run(["git", "-C", str(fresh_repo), "add", "."], check=True, env=env)
+    subprocess.run(
+        ["git", "-C", str(fresh_repo), "commit", "-q", "-m", "seed"],
+        check=True, env=env,
+    )
+
+    # Written after the commit, and never staged, so a checkout of that
+    # commit (the linked worktree below) does not carry a copy of its own.
+    claude_dir = fresh_repo / ".claude"
+    claude_dir.mkdir()
+    (claude_dir / "voice-check.md").write_text(
+        "```voice-check-disable\nno_dashes\n```\n"
+    )
+
+    worktree = tmp_path / "linked-worktree"
+    subprocess.run(
+        ["git", "-C", str(fresh_repo), "worktree", "add", str(worktree), "-b", "wt-branch"],
+        check=True, env=env, capture_output=True, text=True,
+    )
+
+    msg_file = tmp_path / "commit-editmsg"
+    msg_file.write_text("Fix the parser — nested quotes\n")
+
+    run_env = _git_env()
+    run_env["VOICE_CHECK_PYTHON"] = sys.executable
+    run_env["VOICE_CHECK_ENGINE"] = str(ENGINE_FILE)
+    r = subprocess.run(
+        ["bash", str(COMMIT_MSG_TEMPLATE), str(msg_file)],
+        cwd=str(worktree),
+        capture_output=True,
+        text=True,
+        env=run_env,
+    )
+    assert r.returncode == 0
+    combined = r.stdout + r.stderr
+    assert "no_dashes" in combined, (
+        "the linked worktree picked up the main repo's disable instead of "
+        f"its own (absent) supplement:\n{combined}")
+
+
+def test_commit_msg_exits_zero_when_the_engine_is_missing(fresh_repo):
+    msg_file = fresh_repo / ".git" / "COMMIT_EDITMSG"
+    msg_file.parent.mkdir(parents=True, exist_ok=True)
+    msg_file.write_text("Fix the parser — nested quotes\n")
+
+    env = _git_env()
+    env["HOME"] = str(fresh_repo / "empty-home")
+    env["VOICE_CHECK_ENGINE"] = str(fresh_repo / "nope" / "voice_check.py")
+    r = subprocess.run(
+        ["bash", str(COMMIT_MSG_TEMPLATE), str(msg_file)],
+        cwd=str(fresh_repo), capture_output=True, text=True, env=env,
+    )
+    assert r.returncode == 0
+
+
+def test_commit_msg_discards_output_when_the_engine_exits_nonzero(fresh_repo):
+    """An older cached engine without --surface, or a broken $PYTHON, makes
+    the engine invocation itself fail rather than run --report-only, which
+    contractually exits 0. A nonzero status means there is nothing to
+    report, not a finding, so whatever usage or error text the failed
+    invocation printed must never reach the findings banner.
+    """
+    stub = fresh_repo / "stub_engine.py"
+    stub.write_text(
+        "import sys\n"
+        "sys.stderr.write('usage: voice_check.py [-h] ...\\n')\n"
+        "sys.exit(2)\n"
+    )
+    msg_file = fresh_repo / ".git" / "COMMIT_EDITMSG"
+    msg_file.parent.mkdir(parents=True, exist_ok=True)
+    msg_file.write_text("Fix the parser — nested quotes\n")
+
+    env = _git_env()
+    env["VOICE_CHECK_PYTHON"] = sys.executable
+    env["VOICE_CHECK_ENGINE"] = str(stub)
+    r = subprocess.run(
+        ["bash", str(COMMIT_MSG_TEMPLATE), str(msg_file)],
+        cwd=str(fresh_repo), capture_output=True, text=True, env=env,
+    )
+    assert r.returncode == 0
+    assert (r.stdout + r.stderr).strip() == ""
+
+
+def test_commit_msg_exits_zero_when_given_no_argument(fresh_repo):
+    env = _git_env()
+    env["VOICE_CHECK_PYTHON"] = sys.executable
+    env["VOICE_CHECK_ENGINE"] = str(ENGINE_FILE)
+    r = subprocess.run(
+        ["bash", str(COMMIT_MSG_TEMPLATE)],
+        cwd=str(fresh_repo), capture_output=True, text=True, env=env,
+    )
+    assert r.returncode == 0
+
+
+# ---------------------------------------------------------------------------
+# The installer and healer cover both hooks
+# ---------------------------------------------------------------------------
+
+def _commit_msg_hook_path(repo: Path) -> Path:
+    return repo / ".git" / "hooks" / "commit-msg"
+
+
+def test_installer_installs_both_hooks(fresh_repo, fake_home):
+    _run_installer(fresh_repo, fake_home)
+
+    for hook in (_hook_path(fresh_repo), _commit_msg_hook_path(fresh_repo)):
+        assert hook.is_file(), f"not installed: {hook}"
+        assert hook.stat().st_mode & stat.S_IXUSR, f"not executable: {hook}"
+        text = hook.read_text()
+        assert MARKER_START in text
+        assert MARKER_END in text
+        assert "__VOICE_CHECK_ENGINE__" not in text, f"placeholder left in {hook}"
+        engine_line = next(
+            (ln for ln in text.splitlines() if ln.startswith("BAKED_ENGINE=")), None)
+        assert engine_line is not None, f"no BAKED_ENGINE line in {hook}"
+        baked = engine_line.split("=", 1)[1].strip().strip('"')
+        assert Path(baked).resolve() == ENGINE_FILE.resolve()
+
+
+def test_installer_is_idempotent_for_both_hooks(fresh_repo, fake_home):
+    _run_installer(fresh_repo, fake_home)
+    _run_installer(fresh_repo, fake_home)
+
+    for hook in (_hook_path(fresh_repo), _commit_msg_hook_path(fresh_repo)):
+        text = hook.read_text()
+        assert text.count(MARKER_START) == 1, f"duplicate section in {hook}"
+        assert text.count(MARKER_END) == 1, f"duplicate section in {hook}"
+
+
+def test_installer_preserves_a_foreign_commit_msg_hook(fresh_repo, fake_home):
+    """A user's own commit-msg hook must survive, with our section appended."""
+    hooks_dir = fresh_repo / ".git" / "hooks"
+    hooks_dir.mkdir(parents=True, exist_ok=True)
+    foreign = hooks_dir / "commit-msg"
+    foreign.write_text("#!/usr/bin/env bash\necho 'my own hook'\n")
+    foreign.chmod(foreign.stat().st_mode | stat.S_IXUSR)
+
+    _run_installer(fresh_repo, fake_home)
+
+    text = foreign.read_text()
+    assert "echo 'my own hook'" in text, "foreign commit-msg hook was clobbered"
+    assert MARKER_START in text
+    assert text.count(MARKER_START) == 1
+
+
+def test_installed_commit_msg_hook_runs_end_to_end(fresh_repo, fake_home):
+    """A real commit with a dashed message reports and still succeeds."""
+    _run_installer(fresh_repo, fake_home)
+    _stage_file(fresh_repo, "notes.md", "All clean here.\n")
+
+    env = _git_env()
+    env["VOICE_CHECK_PYTHON"] = sys.executable
+    r = subprocess.run(
+        ["git", "-C", str(fresh_repo), "commit",
+         "-m", "Fix the parser — nested quotes"],
+        capture_output=True, text=True, env=env,
+    )
+    assert r.returncode == 0, f"commit blocked:\n{r.stdout}\n{r.stderr}"
+    assert "no_dashes" in (r.stdout + r.stderr)
+
+    log = subprocess.run(
+        ["git", "-C", str(fresh_repo), "log", "--oneline"],
+        capture_output=True, text=True, env=env)
+    assert "Fix the parser" in log.stdout, "commit did not land"
+
+
+def test_healer_reinstalls_both_hooks_when_pre_commit_is_stale(tmp_path):
+    """A repo installed before this release has a stale pre-commit and no
+    commit-msg hook at all. One heal must produce both, current."""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    subprocess.run(["git", "init", "-q", str(repo)], check=True, env=_git_env())
+    _install_hook_text(repo, _hook_with_stamp(ENGINE_FILE, "0.0.1"))
+    assert not (repo / ".git" / "hooks" / "commit-msg").exists()
+
+    home = tmp_path / "home"
+    home.mkdir()
+    result = _run_healer(repo, home)
+    assert result.returncode == 0
+    assert "healed" in result.stdout
+
+    version = _plugin_version()
+    for name in ("pre-commit", "commit-msg"):
+        text = (repo / ".git" / "hooks" / name).read_text()
+        assert f"# voice-check hook version: {version}" in text, f"{name} not current"
+
+
+def test_healer_reinstalls_when_only_the_commit_msg_hook_is_stale(tmp_path):
+    """A half healed install, pre-commit current and commit-msg stale, is
+    worse than an unhealed one because nothing surfaces the mismatch."""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    subprocess.run(["git", "init", "-q", str(repo)], check=True, env=_git_env())
+    version = _plugin_version()
+    _install_hook_text(repo, _hook_with_stamp(ENGINE_FILE, version))
+
+    hooks_dir = repo / ".git" / "hooks"
+    stale = hooks_dir / "commit-msg"
+    stale.write_text(_hook_with_stamp(ENGINE_FILE, "0.0.1"))
+    stale.chmod(stale.stat().st_mode | stat.S_IXUSR)
+
+    home = tmp_path / "home"
+    home.mkdir()
+    result = _run_healer(repo, home)
+    assert result.returncode == 0
+    assert "healed" in result.stdout
+    assert f"# voice-check hook version: {version}" in stale.read_text()
+
+
+def test_healer_noop_when_both_hooks_are_current(tmp_path):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    subprocess.run(["git", "init", "-q", str(repo)], check=True, env=_git_env())
+    version = _plugin_version()
+    pre = _install_hook_text(repo, _hook_with_stamp(ENGINE_FILE, version))
+    msg = repo / ".git" / "hooks" / "commit-msg"
+    msg.write_text(_hook_with_stamp(ENGINE_FILE, version))
+    msg.chmod(msg.stat().st_mode | stat.S_IXUSR)
+
+    before = (pre.read_bytes(), msg.read_bytes())
+    home = tmp_path / "home"
+    home.mkdir()
+    result = _run_healer(repo, home)
+    assert result.returncode == 0
+    assert "healed" not in result.stdout
+    assert (pre.read_bytes(), msg.read_bytes()) == before
+
+
+def test_healer_does_not_install_into_a_repo_that_never_opted_in(tmp_path):
+    """No voice-check marker anywhere means this repo never asked for hooks."""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    subprocess.run(["git", "init", "-q", str(repo)], check=True, env=_git_env())
+    hooks_dir = repo / ".git" / "hooks"
+    hooks_dir.mkdir(parents=True, exist_ok=True)
+    (hooks_dir / "pre-commit").write_text("#!/usr/bin/env bash\nexit 0\n")
+
+    home = tmp_path / "home"
+    home.mkdir()
+    result = _run_healer(repo, home)
+    assert result.returncode == 0
+    assert "healed" not in result.stdout
+    assert not (hooks_dir / "commit-msg").exists()
+
+
+# ---------------------------------------------------------------------------
+# The widened file surface
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize("rel", ["notes.txt", "guide.rst", "readme.markdown"])
+def test_pre_commit_scans_the_widened_extensions(fresh_repo, fake_home, rel):
+    _run_installer(fresh_repo, fake_home)
+    _stage_file(fresh_repo, rel, "The plan is simple — ship it.\n")
+
+    r = _run_hook(fresh_repo)
+    assert r.returncode == 0
+    combined = r.stdout + r.stderr
+    assert f"--- {rel} ---" in combined, f"{rel} was not scanned:\n{combined}"
+    assert "no_dashes" in combined
+
+
+def test_pre_commit_still_scans_markdown(fresh_repo, fake_home):
+    _run_installer(fresh_repo, fake_home)
+    _stage_file(fresh_repo, "notes.md", "The plan is simple — ship it.\n")
+
+    r = _run_hook(fresh_repo)
+    assert r.returncode == 0
+    assert "--- notes.md ---" in (r.stdout + r.stderr)
+
+
+def test_pre_commit_does_not_scan_source_files(fresh_repo, fake_home):
+    """Docstring extraction is a separate phase. A .py file stays out."""
+    _run_installer(fresh_repo, fake_home)
+    _stage_file(fresh_repo, "mod.py", '"""The plan is simple — ship it."""\n')
+
+    r = _run_hook(fresh_repo)
+    assert r.returncode == 0
+    combined = r.stdout + r.stderr
+    assert "mod.py" not in combined, f".py file was scanned:\n{combined}"
+    assert "no_dashes" not in combined
+
+
+def test_pre_commit_does_not_match_an_extension_mid_name(fresh_repo, fake_home):
+    """`.txt` in the middle of a name is not a text file."""
+    _run_installer(fresh_repo, fake_home)
+    _stage_file(fresh_repo, "archive.txt.gz", "The plan is simple — ship it.\n")
+
+    r = _run_hook(fresh_repo)
+    assert r.returncode == 0
+    assert "archive.txt.gz" not in (r.stdout + r.stderr)
+
+
+# ---------------------------------------------------------------------------
+# Version stamps
+# ---------------------------------------------------------------------------
+
+def test_every_hook_template_stamps_the_current_plugin_version():
+    """The healer compares each hook's stamp against plugin.json. A template
+    left at an older stamp means that hook heals on every session start
+    forever; a template ahead of plugin.json means it never heals at all."""
+    version = _plugin_version()
+    for template in (PRE_COMMIT_TEMPLATE, COMMIT_MSG_TEMPLATE):
+        text = template.read_text()
+        assert f"# voice-check hook version: {version}" in text, (
+            f"{template.name} is not stamped {version}")

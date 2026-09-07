@@ -5,7 +5,7 @@ Two Claude Code skills that catch AI writing tells, em dashes, hedging, puffery,
 - **`voice-check`**: reactive scan that fixes violations after you write
 - **`writing-guard`**: proactive guard that loads before drafting and self-censors as you write
 
-Both skills share a single rule list, a Python rules engine, and per-repo supplement support. Includes an advisory git pre-commit hook for the reactive path.
+Both skills share a single rule list, a Python rules engine, and per-repo supplement support. Includes advisory git hooks for the reactive path: pre-commit scans staged prose files, commit-msg scans the commit message itself.
 
 ## What it catches
 
@@ -35,7 +35,7 @@ Two skills, two timings:
 1. **`writing-guard` (proactive).** Loads before Claude produces prose. Reads the rules and self-censors as it drafts. No file required.
 2. **`voice-check` (reactive).** Scans an existing file. Two modes:
    - Manual `/voice-check <file>`: auto-fixes in place
-   - Git pre-commit hook: fast Python rules engine, report-only, advisory
+   - Git hooks: fast Python rules engine, report-only, advisory
 
 The Python engine handles deterministic rules (dashes, vocabulary cluster, puffery, promotional tone, hedging, copula avoidance, dangling participles, vague attributions, bridge phrases, 2026 vocabulary phrases, markup artifacts, five structural frames, mechanical bold headers) at hook speed via a single data-driven rule table plus a small set of document-level analyzers. The Claude-loaded skill handles the remaining context-sensitive patterns (rule of three, elegant variation, uniform sentence rhythm) when invoked manually.
 
@@ -109,16 +109,18 @@ claude plugin marketplace update voice-check
 
 Installed hooks self-heal after upgrades: the hook re-resolves the engine from the plugin cache at commit time, and a SessionStart healer repairs hooks installed by versions before 2.2.1 the first time you start a Claude Code session in that repo. Repos where you never open Claude Code keep the old advisory nag until you run `install-hook.sh` there once. Both the installer and the healer also work from linked git worktrees; the hook lands in the shared hooks directory of the main checkout.
 
-### Install the git pre-commit hook in a repo
+### Install the git hooks in a repo
 
 ```bash
 cd /path/to/your/repo
 bash "$(ls ~/.claude/plugins/cache/voice-check/voice-check/*/templates/install-hook.sh | sort -V | tail -1)"
 ```
 
-The installer is idempotent. If a pre-commit hook already exists, it appends a marked voice-check section rather than overwriting. To uninstall, delete the section between `# === voice-check section start ===` and `# === voice-check section end ===` from `.git/hooks/pre-commit`.
+The installer is idempotent, and installs two hooks: `pre-commit` and `commit-msg`. If a hook of either name already exists, it appends a marked voice-check section rather than overwriting. To uninstall, delete the section between `# === voice-check section start ===` and `# === voice-check section end ===` from both `.git/hooks/pre-commit` and `.git/hooks/commit-msg`.
 
-The hook is **advisory only**, it never blocks commits. Findings print to stderr and the commit proceeds.
+`pre-commit` scans staged `.md`, `.markdown`, `.txt`, and `.rst` files with the full rule set. `commit-msg` scans the commit message with a restricted set: only `no_dashes` and `markup_artifacts`. A commit message cannot carry a `<!-- voice-check: ignore -->` comment, and once written it is in history, so the surface with no escape hatch runs an allowlist. See `COMMIT_SURFACE` in `engine/rules.py`.
+
+Both hooks are **advisory only**, they never block commits. Findings print to stderr and the commit proceeds.
 
 ## Run the tests
 
@@ -164,11 +166,13 @@ plugins/
       rules.py                  Rule table: ids, severities, patterns
       scanner.py                Runs rules against a masked Document
     templates/
-      pre-commit.sh             Git hook template (with placeholder)
-      install-hook.sh           Per-repo hook installer
+      pre-commit.sh             Staged file hook template (with placeholder)
+      commit-msg.sh             Commit message hook template (with placeholder)
+      install-hook.sh           Per-repo installer for both hooks
     tests/
       test_engine.py, test_document.py, test_config.py, test_scanner.py,
-      test_hook_pipeline.py, test_skill_paths.py, test_regressions.py
+      test_hook_pipeline.py, test_skill_paths.py, test_regressions.py,
+      test_analyzers.py, test_structure.py, test_surfaces.py
       fixtures/                 Sample clean and dirty markdown files
 README.md
 LICENSE
