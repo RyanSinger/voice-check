@@ -223,10 +223,14 @@ Analyzer guards return an empty list rather than dividing by zero: no bullets at
 
 For frames, false positives are the risk, so every frame gets a negative test built from ordinary English that must stay silent. These matter more than the positives:
 
-- "He was not only tired but hungry" against `not_just_but`
+- "I could not just sit there and watch" against `not_just_but`
 - "Despite budget challenges, we shipped" against `despite_faces_challenges`
 - "We work from 9 to 5", "She walked from the store to home", "Copy the file from src to dist" against `false_range`
 - "While the tests ran, we reviewed the diff" against `while_also`
+- "It's not about money" against `not_about_but_about`
+- "The benefits are clear and worth the effort" against `advantages_disadvantages`
+
+Note that "He was not only tired but hungry" **does** fire `not_just_but`, and should. "Not only X but Y" is the same negative parallelism construction that `references/rules.md` names, so firing there is correct behavior rather than a false positive.
 
 ### Calibration as a regression test
 
