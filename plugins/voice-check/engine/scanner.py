@@ -120,35 +120,52 @@ def scan(doc, cfg, rel_path: str = "", line_ranges=None) -> List[dict]:
         if cfg.is_disabled(entry, rel_path):
             continue
         try:
+            # Malformed output is treated the same as a raising analyzer: an
+            # entry missing "lines", holding the wrong type, or naming lines
+            # outside the document must not lose the rule passes or the
+            # other analyzers, and must never turn into a "line": 0 finding
+            # backed by a negative index snippet. So entry processing lives
+            # inside this same try, not just the call to "fn".
             produced = entry["fn"](doc, cfg)
+            for item in produced:
+                # A missing "lines" key is a genuine shape violation, not an
+                # analyzer that simply found nothing, so it raises here and
+                # is reported the same way a raising analyzer is. A present
+                # "lines" that is not iterable (an int, for example) raises
+                # naturally at the "for ln in raw_lines" below. Individual
+                # bad values inside an otherwise well formed list (0,
+                # negative, past end of file, non integer) are not shape
+                # violations. They are dropped as evidence that does not
+                # survive, the same as a suppressed or out of range line.
+                raw_lines = item["lines"]
+                evidence = [
+                    ln for ln in raw_lines
+                    if isinstance(ln, int) and 1 <= ln <= len(doc.lines)
+                    and not _suppressed(doc, ln, entry)
+                ]
+                if not evidence:
+                    continue
+                if not any(in_ranges(ln, line_ranges) for ln in evidence):
+                    continue
+                first = evidence[0]
+                findings.append({
+                    "rule": entry["name"],
+                    "rule_id": entry["id"],
+                    "severity": cfg.severity_for(entry),
+                    "line": first,
+                    "col": 0,
+                    "snippet": doc.lines[first - 1].rstrip("\n"),
+                    "message": item["message"],
+                })
         except Exception as exc:  # noqa: BLE001
-            # One failing analyzer must not cost us the rule passes or the
-            # other analyzers. This is the one place the project's "degrade
-            # toward reporting more" principle cannot hold.
+            # One failing or malformed analyzer must not cost us the rule
+            # passes or the other analyzers. This is the one place the
+            # project's "degrade toward reporting more" principle cannot
+            # hold.
             print(
                 f"voice-check: analyzer {entry['id']} failed ({exc}), skipping",
                 file=sys.stderr,
             )
             continue
-
-        for item in produced:
-            evidence = [
-                ln for ln in item["lines"]
-                if not _suppressed(doc, ln, entry)
-            ]
-            if not evidence:
-                continue
-            if not any(in_ranges(ln, line_ranges) for ln in evidence):
-                continue
-            first = evidence[0]
-            findings.append({
-                "rule": entry["name"],
-                "rule_id": entry["id"],
-                "severity": cfg.severity_for(entry),
-                "line": first,
-                "col": 0,
-                "snippet": doc.lines[first - 1].rstrip("\n"),
-                "message": item["message"],
-            })
 
     return findings

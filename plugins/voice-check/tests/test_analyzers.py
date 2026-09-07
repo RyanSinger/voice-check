@@ -169,6 +169,83 @@ def test_a_raising_analyzer_does_not_take_out_other_findings(monkeypatch, capsys
     assert "structure.boom" in capsys.readouterr().err
 
 
+def test_suppressed_evidence_is_excluded_before_the_range_check():
+    """Suppression must reduce the evidence list BEFORE the range filter
+    reads it, and the reported line must come from the surviving evidence.
+
+    Both properties were mutation tested and found unguarded: checking
+    ranges against unfiltered lines, and reporting item["lines"][0]
+    instead of evidence[0], each passed the whole suite.
+    """
+    lines = _bullets(5, 5).splitlines()
+    # Put an inline ignore on the FIRST bolded bullet only.
+    lines[2] = lines[2] + " <!-- voice-check: ignore structure.bold_headers -->"
+    text = "\n".join(lines) + "\n"
+
+    # The reported line must be the SECOND bolded bullet, not the first.
+    f = _bold_findings(_scan(text))
+    assert len(f) == 1
+    assert f[0]["line"] == 4
+
+    # A range covering ONLY the suppressed line must drop the finding.
+    assert _bold_findings(_scan(text, line_ranges=[(3, 3)])) == []
+
+    # A range covering a surviving line keeps it.
+    assert _bold_findings(_scan(text, line_ranges=[(5, 5)]))
+
+
+def _register_bad_analyzer(monkeypatch, fn):
+    monkeypatch.setattr(
+        analyzers, "ANALYZERS",
+        [{"name": "structure", "id": "structure.bad", "category": "structure",
+          "severity": "low", "fn": fn}],
+    )
+
+
+def test_analyzer_returning_none_warns_and_leaves_other_findings(monkeypatch, capsys):
+    """produced is not iterable, so the loop raises. Caught, not fatal."""
+    _register_bad_analyzer(monkeypatch, lambda doc, cfg: None)
+    findings = _scan("A line with an em dash \u2014 here.\n")
+    assert any(f["rule"] == "no_dashes" for f in findings)
+    assert "structure.bad" in capsys.readouterr().err
+
+
+def test_analyzer_item_missing_lines_key_warns_and_leaves_other_findings(monkeypatch, capsys):
+    """A missing "lines" key is a shape violation, not zero evidence."""
+    _register_bad_analyzer(monkeypatch, lambda doc, cfg: [{"message": "x"}])
+    findings = _scan("A line with an em dash \u2014 here.\n")
+    assert any(f["rule"] == "no_dashes" for f in findings)
+    assert "structure.bad" in capsys.readouterr().err
+
+
+def test_analyzer_lines_not_a_list_warns_and_leaves_other_findings(monkeypatch, capsys):
+    """"lines" holding a non iterable value raises when the loop reads it."""
+    _register_bad_analyzer(monkeypatch, lambda doc, cfg: [{"message": "x", "lines": 3}])
+    findings = _scan("A line with an em dash \u2014 here.\n")
+    assert any(f["rule"] == "no_dashes" for f in findings)
+    assert "structure.bad" in capsys.readouterr().err
+
+
+def test_analyzer_line_zero_produces_no_finding_and_no_warning(monkeypatch, capsys):
+    """0 is not a valid 1 indexed line. It is dropped as evidence, quietly,
+    the same as a suppressed or out of range line, not treated as an error."""
+    _register_bad_analyzer(monkeypatch, lambda doc, cfg: [{"message": "x", "lines": [0]}])
+    findings = _scan("A line with an em dash \u2014 here.\n")
+    assert any(f["rule"] == "no_dashes" for f in findings)
+    assert not any(f["rule"] == "structure" for f in findings)
+    assert capsys.readouterr().err == ""
+
+
+def test_analyzer_line_past_end_of_file_is_dropped_quietly(monkeypatch, capsys):
+    """A line number beyond the document is dropped as evidence, not an
+    error: the shape is well formed, the value just cannot be used."""
+    _register_bad_analyzer(monkeypatch, lambda doc, cfg: [{"message": "x", "lines": [999]}])
+    findings = _scan("A line with an em dash \u2014 here.\n")
+    assert any(f["rule"] == "no_dashes" for f in findings)
+    assert not any(f["rule"] == "structure" for f in findings)
+    assert capsys.readouterr().err == ""
+
+
 def test_known_identifiers_includes_analyzer_names_and_ids():
     """Otherwise disabling an analyzer would warn as an unknown rule."""
     assert "structure" in config.KNOWN_IDENTIFIERS
