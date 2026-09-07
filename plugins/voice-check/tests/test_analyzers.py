@@ -63,6 +63,17 @@ def test_ratio_at_threshold_fires():
     assert _run(_bullets(10, 6))
 
 
+def test_bold_mid_line_stays_silent():
+    """The bold run must open the bullet. Bold text later in the line, such
+    as a reference to a term, is not a mechanical header and must not fire,
+    even across many bullets."""
+    lines = ["# Heading", ""]
+    for i in range(5):
+        lines.append(f"- see the **config** file for setting {i}")
+    text = "\n".join(lines) + "\n"
+    assert _run(text) == []
+
+
 def test_many_bullets_with_few_bolded_stays_silent():
     """The case doc_min cannot express: 5 bolded clears an absolute count
     of 4, but 5 percent is nowhere near mechanical."""

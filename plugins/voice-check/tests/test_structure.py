@@ -11,6 +11,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent / 'engine'))
 
 import config  # noqa: E402
 import document  # noqa: E402
+import rules  # noqa: E402
 import scanner  # noqa: E402
 
 
@@ -59,6 +60,14 @@ def test_ordinary_while_clause_stays_silent():
     )
 
 
+def test_while_also_without_comma_stays_silent():
+    """The comma before "it also" is required. Without it the sentence is
+    an ordinary while clause, not the concessive frame."""
+    assert "structure.while_also" not in _ids(
+        "While the tests ran it also linted the diff.\n"
+    )
+
+
 def test_advantages_disadvantages_fires():
     assert "structure.advantages_disadvantages" in _ids(
         "The framework has clear advantages, but it also has real disadvantages.\n"
@@ -95,6 +104,14 @@ def test_ordinary_concessive_stays_silent():
     """Requires all three beats, so a plain "despite" sentence is quiet."""
     assert "structure.despite_faces_challenges" not in _ids(
         "Despite budget challenges, we shipped on time.\n"
+    )
+
+
+def test_concessive_without_faces_stays_silent():
+    """All three beats are required. "Despite its X challenges" alone is
+    an ordinary concessive sentence, not the frame."""
+    assert "structure.despite_faces_challenges" not in _ids(
+        "Despite its budget challenges, we shipped on time.\n"
     )
 
 
@@ -170,3 +187,49 @@ def test_frames_stay_calibrated_across_the_repo():
                 {f["rule_id"] for f in hits}
             )
     assert offenders == {}, offenders
+
+
+# The spec's calibration record (2026-09-07-structural-detection-design.md,
+# "Calibration"). This is the raw occurrence count of each frame across this
+# repository's markdown, with suppression NOT applied, measured directly
+# against masked scan_lines the way the scanner itself matches. Changing a
+# frame's pattern means updating both this table and the spec's table
+# together, since the two are meant to describe the same measurement.
+EXPECTED_RAW_STRUCTURE_COUNTS = {
+    "structure.not_just_but": 5,
+    "structure.not_about_but_about": 3,
+    "structure.while_also": 3,
+    "structure.advantages_disadvantages": 1,
+    "structure.despite_faces_challenges": 3,
+    "structure.false_range": 0,
+}
+
+
+def test_frame_raw_counts_match_the_spec_table():
+    """Pins the raw occurrence counts the spec's calibration table records,
+    separate from test_frames_stay_calibrated_across_the_repo above.
+
+    That test asserts zero SURVIVING findings after suppression, which is
+    the more useful operational guard but pins nothing about the six rows'
+    individual counts: two real pattern broadenings were found to pass it
+    unnoticed, because their extra hits landed inside already suppressed
+    regions. This test measures occurrences before suppression, so a
+    broadening shows up here even when suppression would otherwise hide it.
+
+    Counts occurrences via finditer, not matching lines, because one line
+    can carry two matches of the same rule (references/wikipedia-signs.md
+    line 90 does, for not_just_but).
+    """
+    structure_rows = [r for r in rules.RULES if r["name"] == "structure"]
+    assert {r["id"] for r in structure_rows} == set(EXPECTED_RAW_STRUCTURE_COUNTS)
+
+    counts = {r["id"]: 0 for r in structure_rows}
+    for path in _repo_markdown():
+        doc = document.Document.from_markdown(path.read_text(encoding="utf-8"))
+        for row in structure_rows:
+            pattern = rules.compiled(row)
+            for scan_line in doc.scan_lines:
+                counts[row["id"]] += len(list(pattern.finditer(scan_line)))
+
+    assert counts == EXPECTED_RAW_STRUCTURE_COUNTS
+    assert sum(counts.values()) == 15
