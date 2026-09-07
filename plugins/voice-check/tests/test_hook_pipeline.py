@@ -833,3 +833,50 @@ def test_healer_does_not_install_into_a_repo_that_never_opted_in(tmp_path):
     assert result.returncode == 0
     assert "healed" not in result.stdout
     assert not (hooks_dir / "commit-msg").exists()
+
+
+# ---------------------------------------------------------------------------
+# The widened file surface
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize("rel", ["notes.txt", "guide.rst", "readme.markdown"])
+def test_pre_commit_scans_the_widened_extensions(fresh_repo, fake_home, rel):
+    _run_installer(fresh_repo, fake_home)
+    _stage_file(fresh_repo, rel, "The plan is simple — ship it.\n")
+
+    r = _run_hook(fresh_repo)
+    assert r.returncode == 0
+    combined = r.stdout + r.stderr
+    assert f"--- {rel} ---" in combined, f"{rel} was not scanned:\n{combined}"
+    assert "no_dashes" in combined
+
+
+def test_pre_commit_still_scans_markdown(fresh_repo, fake_home):
+    _run_installer(fresh_repo, fake_home)
+    _stage_file(fresh_repo, "notes.md", "The plan is simple — ship it.\n")
+
+    r = _run_hook(fresh_repo)
+    assert r.returncode == 0
+    assert "--- notes.md ---" in (r.stdout + r.stderr)
+
+
+def test_pre_commit_does_not_scan_source_files(fresh_repo, fake_home):
+    """Docstring extraction is a separate phase. A .py file stays out."""
+    _run_installer(fresh_repo, fake_home)
+    _stage_file(fresh_repo, "mod.py", '"""The plan is simple — ship it."""\n')
+
+    r = _run_hook(fresh_repo)
+    assert r.returncode == 0
+    combined = r.stdout + r.stderr
+    assert "mod.py" not in combined, f".py file was scanned:\n{combined}"
+    assert "no_dashes" not in combined
+
+
+def test_pre_commit_does_not_match_an_extension_mid_name(fresh_repo, fake_home):
+    """`.txt` in the middle of a name is not a text file."""
+    _run_installer(fresh_repo, fake_home)
+    _stage_file(fresh_repo, "archive.txt.gz", "The plan is simple — ship it.\n")
+
+    r = _run_hook(fresh_repo)
+    assert r.returncode == 0
+    assert "archive.txt.gz" not in (r.stdout + r.stderr)

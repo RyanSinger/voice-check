@@ -41,14 +41,18 @@ fi
 
 PYTHON="${VOICE_CHECK_PYTHON:-python3}"
 
-staged_md=$(git diff --cached --name-only --diff-filter=ACM | grep '\.md$' || true)
+# Prose file extensions. Fixed rather than configurable: the supplement
+# already offers voice-check-exclude for opting out, and nobody has asked to
+# opt an extension in. These files can host suppression comments, so they get
+# the full rule set. Source files stay out; docstrings are a separate phase.
+staged_files=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(md|markdown|txt|rst)$' || true)
 
-if [ -z "$staged_md" ]; then
+if [ -z "$staged_files" ]; then
   exit 0
 fi
 
-count=$(echo "$staged_md" | wc -l | tr -d ' ')
-echo "voice-check: scanning $count staged markdown file(s)"
+count=$(echo "$staged_files" | wc -l | tr -d ' ')
+echo "voice-check: scanning $count staged prose file(s)"
 
 findings_total=0
 
@@ -106,7 +110,7 @@ while IFS= read -r f; do
     echo "$out"
     findings_total=$((findings_total + 1))
   fi
-done <<< "$staged_md"
+done <<< "$staged_files"
 
 if [ "$findings_total" -gt 0 ]; then
   echo ""
