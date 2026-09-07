@@ -682,3 +682,154 @@ def test_commit_msg_exits_zero_when_given_no_argument(fresh_repo):
         cwd=str(fresh_repo), capture_output=True, text=True, env=env,
     )
     assert r.returncode == 0
+
+
+# ---------------------------------------------------------------------------
+# The installer and healer cover both hooks
+# ---------------------------------------------------------------------------
+
+def _commit_msg_hook_path(repo: Path) -> Path:
+    return repo / ".git" / "hooks" / "commit-msg"
+
+
+def test_installer_installs_both_hooks(fresh_repo, fake_home):
+    _run_installer(fresh_repo, fake_home)
+
+    for hook in (_hook_path(fresh_repo), _commit_msg_hook_path(fresh_repo)):
+        assert hook.is_file(), f"not installed: {hook}"
+        assert hook.stat().st_mode & stat.S_IXUSR, f"not executable: {hook}"
+        text = hook.read_text()
+        assert MARKER_START in text
+        assert MARKER_END in text
+        assert "__VOICE_CHECK_ENGINE__" not in text, f"placeholder left in {hook}"
+        engine_line = next(
+            (ln for ln in text.splitlines() if ln.startswith("BAKED_ENGINE=")), None)
+        assert engine_line is not None, f"no BAKED_ENGINE line in {hook}"
+        baked = engine_line.split("=", 1)[1].strip().strip('"')
+        assert Path(baked).resolve() == ENGINE_FILE.resolve()
+
+
+def test_installer_is_idempotent_for_both_hooks(fresh_repo, fake_home):
+    _run_installer(fresh_repo, fake_home)
+    _run_installer(fresh_repo, fake_home)
+
+    for hook in (_hook_path(fresh_repo), _commit_msg_hook_path(fresh_repo)):
+        text = hook.read_text()
+        assert text.count(MARKER_START) == 1, f"duplicate section in {hook}"
+        assert text.count(MARKER_END) == 1, f"duplicate section in {hook}"
+
+
+def test_installer_preserves_a_foreign_commit_msg_hook(fresh_repo, fake_home):
+    """A user's own commit-msg hook must survive, with our section appended."""
+    hooks_dir = fresh_repo / ".git" / "hooks"
+    hooks_dir.mkdir(parents=True, exist_ok=True)
+    foreign = hooks_dir / "commit-msg"
+    foreign.write_text("#!/usr/bin/env bash\necho 'my own hook'\n")
+    foreign.chmod(foreign.stat().st_mode | stat.S_IXUSR)
+
+    _run_installer(fresh_repo, fake_home)
+
+    text = foreign.read_text()
+    assert "echo 'my own hook'" in text, "foreign commit-msg hook was clobbered"
+    assert MARKER_START in text
+    assert text.count(MARKER_START) == 1
+
+
+def test_installed_commit_msg_hook_runs_end_to_end(fresh_repo, fake_home):
+    """A real commit with a dashed message reports and still succeeds."""
+    _run_installer(fresh_repo, fake_home)
+    _stage_file(fresh_repo, "notes.md", "All clean here.\n")
+
+    env = _git_env()
+    env["VOICE_CHECK_PYTHON"] = sys.executable
+    r = subprocess.run(
+        ["git", "-C", str(fresh_repo), "commit",
+         "-m", "Fix the parser — nested quotes"],
+        capture_output=True, text=True, env=env,
+    )
+    assert r.returncode == 0, f"commit blocked:\n{r.stdout}\n{r.stderr}"
+    assert "no_dashes" in (r.stdout + r.stderr)
+
+    log = subprocess.run(
+        ["git", "-C", str(fresh_repo), "log", "--oneline"],
+        capture_output=True, text=True, env=env)
+    assert "Fix the parser" in log.stdout, "commit did not land"
+
+
+def test_healer_reinstalls_both_hooks_when_pre_commit_is_stale(tmp_path):
+    """A repo installed before this release has a stale pre-commit and no
+    commit-msg hook at all. One heal must produce both, current."""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    subprocess.run(["git", "init", "-q", str(repo)], check=True, env=_git_env())
+    _install_hook_text(repo, _hook_with_stamp(ENGINE_FILE, "0.0.1"))
+    assert not (repo / ".git" / "hooks" / "commit-msg").exists()
+
+    home = tmp_path / "home"
+    home.mkdir()
+    result = _run_healer(repo, home)
+    assert result.returncode == 0
+    assert "healed" in result.stdout
+
+    version = _plugin_version()
+    for name in ("pre-commit", "commit-msg"):
+        text = (repo / ".git" / "hooks" / name).read_text()
+        assert f"# voice-check hook version: {version}" in text, f"{name} not current"
+
+
+def test_healer_reinstalls_when_only_the_commit_msg_hook_is_stale(tmp_path):
+    """A half healed install, pre-commit current and commit-msg stale, is
+    worse than an unhealed one because nothing surfaces the mismatch."""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    subprocess.run(["git", "init", "-q", str(repo)], check=True, env=_git_env())
+    version = _plugin_version()
+    _install_hook_text(repo, _hook_with_stamp(ENGINE_FILE, version))
+
+    hooks_dir = repo / ".git" / "hooks"
+    stale = hooks_dir / "commit-msg"
+    stale.write_text(_hook_with_stamp(ENGINE_FILE, "0.0.1"))
+    stale.chmod(stale.stat().st_mode | stat.S_IXUSR)
+
+    home = tmp_path / "home"
+    home.mkdir()
+    result = _run_healer(repo, home)
+    assert result.returncode == 0
+    assert "healed" in result.stdout
+    assert f"# voice-check hook version: {version}" in stale.read_text()
+
+
+def test_healer_noop_when_both_hooks_are_current(tmp_path):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    subprocess.run(["git", "init", "-q", str(repo)], check=True, env=_git_env())
+    version = _plugin_version()
+    pre = _install_hook_text(repo, _hook_with_stamp(ENGINE_FILE, version))
+    msg = repo / ".git" / "hooks" / "commit-msg"
+    msg.write_text(_hook_with_stamp(ENGINE_FILE, version))
+    msg.chmod(msg.stat().st_mode | stat.S_IXUSR)
+
+    before = (pre.read_bytes(), msg.read_bytes())
+    home = tmp_path / "home"
+    home.mkdir()
+    result = _run_healer(repo, home)
+    assert result.returncode == 0
+    assert "healed" not in result.stdout
+    assert (pre.read_bytes(), msg.read_bytes()) == before
+
+
+def test_healer_does_not_install_into_a_repo_that_never_opted_in(tmp_path):
+    """No voice-check marker anywhere means this repo never asked for hooks."""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    subprocess.run(["git", "init", "-q", str(repo)], check=True, env=_git_env())
+    hooks_dir = repo / ".git" / "hooks"
+    hooks_dir.mkdir(parents=True, exist_ok=True)
+    (hooks_dir / "pre-commit").write_text("#!/usr/bin/env bash\nexit 0\n")
+
+    home = tmp_path / "home"
+    home.mkdir()
+    result = _run_healer(repo, home)
+    assert result.returncode == 0
+    assert "healed" not in result.stdout
+    assert not (hooks_dir / "commit-msg").exists()
