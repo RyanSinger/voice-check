@@ -162,18 +162,24 @@ The tell is a false enumeration of scope, and it has a syntactic signature: lowe
 
 ### Calibration
 
-Running all six patterns over this repository's markdown, twenty two files at the time of writing, produces fourteen hits and zero false positives on genuine prose:
+<!-- voice-check: disable structure -->
+
+Running all six patterns over this repository's markdown, twenty two files at the time of writing, produces fifteen hits and zero false positives on genuine prose:
 
 | Rule | Hits |
 | --- | --- |
-| `structure.not_just_but` | 4 |
+| `structure.not_just_but` | 5 |
 | `structure.not_about_but_about` | 3 |
 | `structure.while_also` | 3 |
 | `structure.advantages_disadvantages` | 1 |
 | `structure.despite_faces_challenges` | 3 |
 | `structure.false_range` | 0 |
 
-Every hit lands in a file that quotes these patterns as examples: `references/examples.md` (its deliberate "before" samples), `references/rules.md`, `references/wikipedia-signs.md`, `specs/2026-08-11-voice-check-upgrade-design.md`, and this file, whose own worked note two sections up confirms that "not only X but Y" fires. Each is a document about the rules rather than a document exhibiting them, which is what suppression exists for.
+Every hit lands in a file that quotes these patterns as examples: `references/examples.md` (four hits, its deliberate "before" samples), `references/rules.md` (four hits), `specs/2026-08-11-voice-check-upgrade-design.md` (three hits), `references/wikipedia-signs.md` (three hits), and this file (one hit, its own worked note two sections up confirming that "not only X but Y" fires). Each is a document about the rules rather than a document exhibiting them, which is what suppression exists for.
+
+A single line can carry more than one match of the same rule. `references/wikipedia-signs.md` line 90 opens with a short "not just" construction and, later in the same sentence, an independent "not only" one, so the engine's `finditer` scan finds two non overlapping `not_just_but` matches on that one line, not one. Counting matched lines instead of matched occurrences undercounts a table like this one; count occurrences.
+
+<!-- voice-check: enable -->
 
 ## The bold header analyzer
 
