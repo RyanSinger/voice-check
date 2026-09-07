@@ -596,8 +596,66 @@ def test_commit_msg_is_silent_on_an_aborted_empty_message(fresh_repo):
 
 def test_commit_msg_leaves_no_scratch_files_behind(fresh_repo):
     _run_commit_msg_template(fresh_repo, "Fix the parser — nested quotes\n")
-    leftovers = sorted(p.name for p in (fresh_repo / ".git").glob("voice-check-*"))
-    assert leftovers == [], f"scratch files left behind: {leftovers}"
+    root_leftovers = sorted(p.name for p in fresh_repo.glob(".voice-check-*"))
+    git_dir_leftovers = sorted(p.name for p in (fresh_repo / ".git").glob("voice-check-*"))
+    assert root_leftovers == [], f"scratch files left behind at repo root: {root_leftovers}"
+    assert git_dir_leftovers == [], f"scratch files left behind in .git: {git_dir_leftovers}"
+
+
+def test_commit_msg_uses_the_linked_worktree_own_config_not_the_main_repo(
+        fresh_repo, tmp_path):
+    """Pins the worktree defect.
+
+    git rev-parse --git-common-dir resolves to the MAIN repository's .git in
+    a linked worktree, so a scratch file placed there walks up to the main
+    checkout and picks up its .claude/voice-check.md instead of the linked
+    worktree's own (absent) supplement. pre-commit.sh scanning a real file in
+    the same worktree would never make that mistake, so the commit-msg hook
+    must not either. The main repo disables no_dashes here; the worktree has
+    no supplement of its own, so an em dash committed from the worktree must
+    still be reported.
+    """
+    (fresh_repo / "README.md").write_text("seed\n")
+
+    env = _git_env()
+    subprocess.run(["git", "-C", str(fresh_repo), "add", "."], check=True, env=env)
+    subprocess.run(
+        ["git", "-C", str(fresh_repo), "commit", "-q", "-m", "seed"],
+        check=True, env=env,
+    )
+
+    # Written after the commit, and never staged, so a checkout of that
+    # commit (the linked worktree below) does not carry a copy of its own.
+    claude_dir = fresh_repo / ".claude"
+    claude_dir.mkdir()
+    (claude_dir / "voice-check.md").write_text(
+        "```voice-check-disable\nno_dashes\n```\n"
+    )
+
+    worktree = tmp_path / "linked-worktree"
+    subprocess.run(
+        ["git", "-C", str(fresh_repo), "worktree", "add", str(worktree), "-b", "wt-branch"],
+        check=True, env=env, capture_output=True, text=True,
+    )
+
+    msg_file = tmp_path / "commit-editmsg"
+    msg_file.write_text("Fix the parser — nested quotes\n")
+
+    run_env = _git_env()
+    run_env["VOICE_CHECK_PYTHON"] = sys.executable
+    run_env["VOICE_CHECK_ENGINE"] = str(ENGINE_FILE)
+    r = subprocess.run(
+        ["bash", str(COMMIT_MSG_TEMPLATE), str(msg_file)],
+        cwd=str(worktree),
+        capture_output=True,
+        text=True,
+        env=run_env,
+    )
+    assert r.returncode == 0
+    combined = r.stdout + r.stderr
+    assert "no_dashes" in combined, (
+        "the linked worktree picked up the main repo's disable instead of "
+        f"its own (absent) supplement:\n{combined}")
 
 
 def test_commit_msg_exits_zero_when_the_engine_is_missing(fresh_repo):

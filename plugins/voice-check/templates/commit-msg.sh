@@ -48,19 +48,33 @@ fi
 
 PYTHON="${VOICE_CHECK_PYTHON:-python3}"
 
-# The scratch files live in the git directory, not /tmp, on purpose. The
-# engine discovers a repo's .claude/voice-check.md by walking up from the
-# scanned file to the git root, so a file in /tmp would silently miss this
-# repo's supplement. From "<git dir>/voice-check-commit-msg.scan" the walk
-# reaches the repo root and finds it.
-GIT_COMMON=$(git rev-parse --git-common-dir 2>/dev/null) || exit 0
-case "$GIT_COMMON" in
+# The scratch files live at the checkout's own top level, not /tmp and not
+# the git directory, on purpose. The engine discovers a repo's
+# .claude/voice-check.md by walking up from the scanned file to the git
+# root, so a file in /tmp would silently miss this repo's supplement. And
+# git rev-parse --git-common-dir is the wrong root in a linked worktree: it
+# resolves to the MAIN repository's .git there, so a scratch file placed
+# under it would walk up to the main checkout and apply that repo's
+# supplement instead of the worktree's own, while pre-commit.sh scanning a
+# real file in the same worktree would apply the worktree's supplement.
+# git rev-parse --show-toplevel resolves to the worktree's own root in a
+# linked worktree, and to the repo root in a normal checkout, matching what
+# pre-commit.sh sees. If --show-toplevel fails or is empty (a bare
+# repository, for instance), fall back to --git-common-dir rather than
+# giving up entirely.
+SCRATCH_ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || SCRATCH_ROOT=""
+if [ -z "$SCRATCH_ROOT" ]; then
+  SCRATCH_ROOT=$(git rev-parse --git-common-dir 2>/dev/null) || exit 0
+fi
+case "$SCRATCH_ROOT" in
   /*) ;;
-  *) GIT_COMMON="$(pwd)/$GIT_COMMON" ;;
+  *) SCRATCH_ROOT="$(pwd)/$SCRATCH_ROOT" ;;
 esac
 
-CUT_FILE="$GIT_COMMON/voice-check-commit-msg.cut"
-SCAN_FILE="$GIT_COMMON/voice-check-commit-msg.scan"
+# A leading dot keeps these inert if a crash ever outlives the trap below:
+# they read as an ordinary hidden file rather than a stray voice-check name.
+CUT_FILE="$SCRATCH_ROOT/.voice-check-commit-msg.cut"
+SCAN_FILE="$SCRATCH_ROOT/.voice-check-commit-msg.scan"
 # Every exit path, including the failure paths. A hook that litters on every
 # commit is its own defect.
 trap 'rm -f "$CUT_FILE" "$SCAN_FILE"' EXIT
