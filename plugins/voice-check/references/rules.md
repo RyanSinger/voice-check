@@ -85,13 +85,11 @@ Matching a sentence shape instead of a word list carries a cost: some
 ordinary prose has the same shape as the tell. Three of the five engine rows
 have a confirmed false positive shape. `not_just_but` fires on ordinary
 enumeration such as "This library supports not only Python but also Java."
-`false_range` fires on a genuine range built from plural nouns, such as
-"events from decades to centuries." `while_also` fires on an ordinary
-concessive sentence such as "While Sarah wrote the tests, they also fixed
-the linter." All five rows default to low severity, so a hit collapses into
-one counted summary line instead of surfacing on its own; a repo whose
-prose keeps tripping one of these can disable it, reassign its severity, or
-suppress the line in a supplement.
+`false_range` fires on a genuine range built from plural nouns, such as "events from decades to centuries," and it also fires on ordinary migration prose in the same shape, such as "from callbacks to promises." That is the same plural noun to plural noun shape a genuine sequence uses, so an ordinary changelog line describing a migration reads as a false range too.
+`while_also` fires on an ordinary concessive sentence such as "While Sarah wrote the tests, they also fixed the linter." All five rows default to low
+severity, so a hit collapses into one counted summary line instead of
+surfacing on its own; a repo whose prose keeps tripping one of these can
+disable it, reassign its severity, or suppress the line in a supplement.
 
 ## Vague Attributions `[engine + skill]`
 

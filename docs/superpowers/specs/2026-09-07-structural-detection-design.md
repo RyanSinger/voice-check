@@ -13,6 +13,8 @@ Running the shipped 2.3.0 engine over this paragraph reports zero findings:
 
 That text carries negative parallelism, balanced-debate framing, a rule of three, and flat rhythm. Every structural rule in `references/rules.md` is tagged `[skill only]`, and the hook runs the engine alone, so the always-on surface catches vocabulary and misses structure. Structure is the part that most makes prose read as machine written.
 
+Of those four tells, this phase reaches only one in this exact paragraph. The negative parallelism sentence fires `structure.not_just_but`. The rule of three and flat rhythm are out of scope for this phase by design, see "Scope" below, so neither is expected to fire here or anywhere. The balanced debate sentence, "While there are tradeoffs to this approach, the benefits outweigh them for most teams," does not fire `structure.while_also`, because that pattern requires a comma followed by "it," "they," or "there" plus "also," and this sentence has none of the three pronouns in that position. A reader should not expect Phase 2 to catch every instance of a frame it targets, only the syntactic shape the pattern is written to match.
+
 ## Scope
 
 In scope:
@@ -158,6 +160,8 @@ The tell is a false enumeration of scope, and it has a syntactic signature: lowe
 
 **Known miss, accepted deliberately.** Gerund ranges such as "from onboarding to offboarding" do not fire, because a gerund is not a plural. Broadening to `[a-z]+(?:s|ing)` would catch them but would also fire on "from testing to shipping", which describes a genuine sequence rather than a false spectrum. Gerund pairs are more often real orderings than plural noun pairs are, so the conservative form is preferred and the miss is documented.
 
+**Known false positive class, undocumented at first ship.** Plural to plural is also the exact shape of an ordinary migration note: a sentence built from "from callbacks to promises," or "from webhooks to polls," or "from users to teams," reads as a false range too. Each is a genuine sequence, the same category "from testing to shipping" was excluded to protect, but the plural noun shape does not distinguish a genuine sequence from a false enumeration of scope, so it fires anyway. This is exactly the same gap the gerund exclusion above was reasoned around, from the opposite direction: gerund pairs were left out because most are genuine sequences, and plural noun pairs were kept in because most are not, but migration prose is a common case where a plural noun pair is a genuine sequence too. This is documented rather than fixed, since narrowing the pattern to exclude it would reopen the false range surface the plural restriction exists to close. `references/rules.md` records it in the frames' false positive paragraph.
+
 <!-- voice-check: enable -->
 
 ### Calibration
@@ -180,6 +184,8 @@ Every hit lands in a file that quotes these patterns as examples: `references/ex
 A single line can carry more than one match of the same rule. `references/wikipedia-signs.md` line 90 opens with a short "not just" construction and, later in the same sentence, an independent "not only" one, so the engine's `finditer` scan finds two non overlapping `not_just_but` matches on that one line, not one. Counting matched lines instead of matched occurrences undercounts a table like this one; count occurrences.
 
 <!-- voice-check: enable -->
+
+A wider measurement against 1715 markdown files outside this repository found all six frames combined firing 7 times total, roughly one hit per 245 files. This repository's own fifteen hits are not representative of the frames' rate in the wild; they are concentrated here because this repository is unusually likely to quote its own patterns as examples.
 
 ## The bold header analyzer
 
@@ -212,6 +218,8 @@ The threshold flags this project's own `README.md` and `references/rules.md`. Bo
 The rule as `references/rules.md` states it ("Use sparingly, not mechanically") does describe both files. Rather than weaken the rule with a heuristic for what counts as a glossary, both files receive a targeted suppression naming `structure.bold_headers` specifically, with a comment saying they are definition lists. Other repositories still get the detection.
 
 This is recorded as a known tension rather than settled: if the rule proves noisy in practice, narrowing it to fire only when the bold run is a full sentence, or only when no colon follows, is the first thing to try.
+
+A wider measurement against 1715 markdown files outside this repository found the analyzer firing on 6.2 percent of files, 107 of 1715, and roughly half of those, 49 files, are definition list shaped: a bold run followed by a colon, the same glossary shape this repository's own two suppressed files carry. One file in sixteen is a materially different picture than a one off tension noticed in two files of one repository, and the decision about narrowing the analyzer should be made against that number rather than against this repository alone.
 
 ## Error handling
 
@@ -274,7 +282,7 @@ Three remain `[skill only]`, each with its reason recorded: rule of three and el
 
 ## Success criteria
 
-1. The paragraph quoted in Context reports at least three structural findings.
+1. The paragraph quoted in Context reports at least one structural finding, where version 2.3.0 reported zero.
 2. The six frames produce exactly the recorded counts across this repository's markdown, pinned by a test.
 3. Every frame has a negative test drawn from ordinary English that stays silent.
 4. `mechanical_bold_headers` fires on a document with 4 or more bullets that is 60% or more bolded, and stays silent below either threshold.
