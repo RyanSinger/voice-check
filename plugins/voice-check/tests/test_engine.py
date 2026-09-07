@@ -686,3 +686,112 @@ def test_dead_backcompat_shims_are_gone():
         "PUFFERY_WORDS", "PROMOTIONAL_PHRASES",
     ):
         assert not hasattr(rules, name), f"{name} should have been deleted"
+
+
+import subprocess  # noqa: E402
+
+ENGINE = str(Path(__file__).parent.parent / "engine" / "voice_check.py")
+
+
+def _cli(*args):
+    return subprocess.run(
+        [sys.executable, ENGINE, *args],
+        capture_output=True, text=True,
+    )
+
+
+def test_parse_ranges_reads_a_comma_separated_list():
+    assert voice_check.parse_ranges("12-18,40-41") == [(12, 18), (40, 41)]
+
+
+def test_parse_ranges_accepts_a_single_line():
+    assert voice_check.parse_ranges("7") == [(7, 7)]
+
+
+def test_parse_ranges_returns_none_on_garbage():
+    assert voice_check.parse_ranges("not-a-range") is None
+    assert voice_check.parse_ranges("") is None
+
+
+def test_high_severity_finding_prints_in_full(tmp_path):
+    f = tmp_path / "d.md"
+    f.write_text("The plan is simple — ship it.\n")
+    out = _cli("--report-only", str(f))
+    assert out.returncode == 0
+    assert "no_dashes" in out.stdout
+    assert "line 1" in out.stdout
+
+
+def test_low_severity_finding_collapses_by_default(tmp_path):
+    f = tmp_path / "d.md"
+    f.write_text("additionally the key landscape is pivotal\n")
+    out = _cli("--report-only", str(f))
+    assert "below medium severity" in out.stdout
+    assert "ai_vocab_cluster" in out.stdout
+    assert "occurrences across" not in out.stdout
+
+
+def test_min_severity_low_prints_everything(tmp_path):
+    f = tmp_path / "d.md"
+    f.write_text("additionally the key landscape is pivotal\n")
+    out = _cli("--report-only", "--min-severity", "low", str(f))
+    assert "occurrences across" in out.stdout
+    assert "below medium severity" not in out.stdout
+
+
+def test_min_severity_high_collapses_medium_findings(tmp_path):
+    f = tmp_path / "d.md"
+    f.write_text("our groundbreaking platform\n")
+    out = _cli("--report-only", "--min-severity", "high", str(f))
+    assert "below high severity" in out.stdout
+    assert "Show importance through specifics" not in out.stdout
+
+
+def test_lines_flag_restricts_line_scope_findings(tmp_path):
+    f = tmp_path / "d.md"
+    f.write_text("a — b\nc — d\n")
+    out = _cli("--report-only", "--lines", "2-2", str(f))
+    assert "line 2" in out.stdout
+    assert "line 1" not in out.stdout
+
+
+def test_malformed_lines_flag_warns_and_scans_whole_file(tmp_path):
+    f = tmp_path / "d.md"
+    f.write_text("a — b\nc — d\n")
+    out = _cli("--report-only", "--lines", "garbage", str(f))
+    assert out.returncode == 0
+    assert "line 1" in out.stdout
+    assert "line 2" in out.stdout
+    assert "garbage" in out.stderr
+
+
+def test_non_utf8_file_does_not_crash(tmp_path):
+    f = tmp_path / "d.md"
+    f.write_bytes(b"\xff\xfe binary junk \x00\x01\n")
+    out = _cli("--report-only", str(f))
+    assert out.returncode == 0
+
+
+def test_config_warnings_print_to_stderr(tmp_path):
+    (tmp_path / ".git").mkdir()
+    d = tmp_path / ".claude"
+    d.mkdir()
+    (d / "voice-check.md").write_text("```voice-check-regex\n[unclosed\n```\n")
+    f = tmp_path / "d.md"
+    f.write_text("plain text\n")
+    out = _cli("--report-only", str(f))
+    assert out.returncode == 0
+    assert "unclosed" in out.stderr
+
+
+def test_missing_file_exits_two():
+    out = _cli("--report-only", "/nonexistent/nope.md")
+    assert out.returncode == 2
+
+
+def test_clean_file_prints_nothing_and_exits_zero(tmp_path):
+    f = tmp_path / "c.md"
+    f.write_text("The plan is simple. Ship it. Iterate on real usage.\n")
+    out = _cli("--report-only", str(f))
+    assert out.returncode == 0
+    assert out.stdout.strip() == ""
