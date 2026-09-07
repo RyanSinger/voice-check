@@ -126,8 +126,16 @@ REPO_ROOT = Path(__file__).parent.parent.parent.parent
 def _repo_markdown():
     skip = {".git", ".venv", "node_modules", ".superpowers", "syndicate", ".claude"}
     for p in sorted(REPO_ROOT.rglob("*.md")):
-        if not skip.intersection(p.parts):
+        if not skip.intersection(p.relative_to(REPO_ROOT).parts):
             yield p
+
+
+def test_the_calibration_scan_actually_reaches_files():
+    """A skip filter bug once made the calibration test iterate zero
+    files and pass vacuously. Pin that it sees a real corpus."""
+    files = list(_repo_markdown())
+    assert len(files) >= 10, f"calibration scanned only {len(files)} files"
+    assert any(p.name == "README.md" for p in files)
 
 
 def test_frames_stay_calibrated_across_the_repo():

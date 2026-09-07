@@ -230,7 +230,9 @@ For frames, false positives are the risk, so every frame gets a negative test bu
 - "It's not about money" against `not_about_but_about`
 - "The benefits are clear and worth the effort" against `advantages_disadvantages`
 
+<!-- voice-check: disable structure -->
 Note that "He was not only tired but hungry" **does** fire `not_just_but`, and should. "Not only X but Y" is the same negative parallelism construction that `references/rules.md` names, so firing there is correct behavior rather than a false positive.
+<!-- voice-check: enable -->
 
 ### Calibration as a regression test
 
