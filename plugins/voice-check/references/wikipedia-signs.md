@@ -49,11 +49,15 @@ Words to watch: industry reports, observers have cited, experts argue, some crit
 
 LLMs attribute opinions to unnamed authorities, a weasel wording pattern, and inflate how widely held a view is by citing one or two sources as if they represent consensus.
 
+<!-- voice-check: disable structure -->
+
 ### Outline like conclusions about challenges and future prospects
 
 Words to watch: despite its ... faces several challenges, despite these challenges, "Challenges and Legacy" as a heading, "Future Outlook" as a heading.
 
 A recurring template: articles end with a section that opens "Despite its [positive traits], [subject] faces challenges," followed by vague, mildly optimistic speculation about future initiatives. This pattern has appeared across subjects as different as economic law, urban development, and technology drafts, always with the same rigid shape.
+
+<!-- voice-check: enable -->
 
 ### Leads treating list titles as proper nouns
 
@@ -77,6 +81,8 @@ Words to watch: serves as, stands as, marks, functions as, operates as, represen
 
 A 2023 study documented more than a ten percent drop in "is" and "are" usage in academic writing after LLM adoption; Wikipedia edits show a similar pattern once lead paragraph conventions are controlled for. This shows up clearly in AI assisted copyedits: "is LAAA's exhibition arm" becomes "serves as LAAA's exhibition space"; "is the first" becomes "holds the distinction of being."
 
+<!-- voice-check: disable structure -->
+
 ### Contrast reframes (negative parallelisms)
 
 Three related constructions, all used to make a claim sound more balanced or insightful than it is:
@@ -88,6 +94,8 @@ Not X, but Y: a more absolute version, such as "not grounded in visual mastery, 
 X rather than Y: associated particularly with Grok output, for example a sentence describing a historical actor as "prioritizing empirical consolidation of power amid fragmented loyalties rather than ideological purity."
 
 All three patterns explicitly negate a simpler framing before asserting a more complex one, a rhetorical move that reads as insight but usually adds nothing sourced.
+
+<!-- voice-check: enable -->
 
 ### Rule of three
 

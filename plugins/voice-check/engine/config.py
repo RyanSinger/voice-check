@@ -23,6 +23,7 @@ from fnmatch import fnmatch
 from pathlib import Path
 from typing import List, Optional
 
+import analyzers
 import rules
 
 RULE_KINDS = {
@@ -41,7 +42,10 @@ SETTING_KINDS = {
 # their own names at scan time, so an unknown identifier warns rather than
 # failing: rule ids shift between versions and a stale entry must not be fatal.
 KNOWN_IDENTIFIERS = (
-    {r["name"] for r in rules.RULES} | {r["id"] for r in rules.RULES}
+    {r["name"] for r in rules.RULES}
+    | {r["id"] for r in rules.RULES}
+    | {a["name"] for a in analyzers.ANALYZERS}
+    | {a["id"] for a in analyzers.ANALYZERS}
 )
 
 

@@ -2,10 +2,12 @@
 
 The only module that knows about both rules and documents. Applies, in order:
 row selection from config, line scope matching, document scope aggregation,
-suppression, severity tagging, and line range filtering.
+suppression, severity tagging, line range filtering, and the analyzer pass.
 """
+import sys
 from typing import Dict, List
 
+import analyzers
 import rules
 
 
@@ -109,5 +111,76 @@ def scan(doc, cfg, rel_path: str = "", line_ranges=None) -> List[dict]:
             "snippet": "",
             "message": message,
         })
+
+    # Analyzer pass. Analyzers compute over the document instead of matching
+    # it, and return {"message", "lines"} entries. Everything that makes an
+    # entry into a finding happens here, so an analyzer needs no knowledge of
+    # suppression, severity, or line ranges.
+    for entry in analyzers.ANALYZERS:
+        if cfg.is_disabled(entry, rel_path):
+            continue
+        try:
+            # Malformed output is treated the same as a raising analyzer: an
+            # entry missing "lines", holding the wrong type, or naming lines
+            # outside the document must not lose the rule passes or the
+            # other analyzers, and must never turn into a "line": 0 finding
+            # backed by a negative index snippet. So entry processing lives
+            # inside this same try, not just the call to "fn".
+            produced = entry["fn"](doc, cfg)
+            for item in produced:
+                # A missing "lines" key is a genuine shape violation, not an
+                # analyzer that simply found nothing, so it raises here and
+                # is reported the same way a raising analyzer is. A present
+                # "lines" that is not iterable (an int, for example) raises
+                # naturally at the "for ln in raw_lines" below. Individual
+                # bad values inside an otherwise well formed list (0,
+                # negative, past end of file, non integer) are not shape
+                # violations. They are dropped as evidence that does not
+                # survive, the same as a suppressed or out of range line.
+                raw_lines = item["lines"]
+                evidence = [
+                    ln for ln in raw_lines
+                    # bool is a subclass of int in Python, so an explicit
+                    # exclusion is required here. Without it, an analyzer
+                    # returning "lines": [True] would evidence a finding on
+                    # line 1 with True treated as the line number.
+                    if isinstance(ln, int) and not isinstance(ln, bool)
+                    and 1 <= ln <= len(doc.lines)
+                    and not _suppressed(doc, ln, entry)
+                ]
+                if not evidence:
+                    continue
+                if not any(in_ranges(ln, line_ranges) for ln in evidence):
+                    continue
+                first = evidence[0]
+                findings.append({
+                    "rule": entry["name"],
+                    "rule_id": entry["id"],
+                    "severity": cfg.severity_for(entry),
+                    "line": first,
+                    "col": 0,
+                    "snippet": doc.lines[first - 1].rstrip("\n"),
+                    "message": item["message"],
+                })
+        except Exception as exc:  # noqa: BLE001
+            # One failing or malformed analyzer must not cost us the rule
+            # passes or the other analyzers. This is the one place the
+            # project's "degrade toward reporting more" principle cannot
+            # hold.
+            #
+            # Known choice, not a bug: if an analyzer raises partway through
+            # its own produced list, whatever entries were already appended
+            # to findings before the failure stay in the report. The message
+            # below says the analyzer was "skipped," which describes what
+            # happens to the rest of its output, not what already landed.
+            # With a single analyzer registered today this never happens in
+            # practice, since mechanical_bold_headers returns at most one
+            # entry, but a future analyzer producing several entries could
+            # hit it.
+            print(
+                f"voice-check: analyzer {entry['id']} failed ({exc}), skipping",
+                file=sys.stderr,
+            )
+            continue
 
     return findings

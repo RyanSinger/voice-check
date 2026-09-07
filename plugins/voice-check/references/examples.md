@@ -42,6 +42,8 @@ Before/after examples for each rule category. Use these to calibrate when fixing
 - BEFORE: "We need speed, accuracy, and reliability."
 - AFTER: "We need speed and accuracy. Reliability comes from those two."
 
+<!-- voice-check: disable structure -->
+
 ### Negative parallelism
 - BEFORE: "It's not just a tool, it's a workflow."
 - AFTER: "It's a workflow."
@@ -53,6 +55,8 @@ Before/after examples for each rule category. Use these to calibrate when fixing
 ### Challenges and future prospects
 - BEFORE: "Despite its strong adoption, the framework faces challenges, but the team remains optimistic about future growth."
 - AFTER: "Adoption is strong. The team is fixing the slow build problem next quarter."
+
+<!-- voice-check: enable -->
 
 ### Elegant variation
 - BEFORE: "Nick led the project. The engineer brought deep expertise. The technical lead's experience showed."
@@ -78,6 +82,8 @@ Before/after examples for each rule category. Use these to calibrate when fixing
 - BEFORE: "The study confirms the trend. :contentReference[oaicite:0]{index=0}"
 - AFTER: "The study confirms the trend (Smith et al., 2025)."
 
+<!-- voice-check: disable structure -->
+
 ## Contrast reframes
 
 - BEFORE: "It's not about the tooling, it's about the culture."
@@ -87,3 +93,5 @@ Before/after examples for each rule category. Use these to calibrate when fixing
 
 - BEFORE: "While microservices offer flexibility, they also introduce complexity."
 - AFTER: "Microservices cost us two weeks of debugging distributed traces. We went back to the monolith."
+
+<!-- voice-check: enable -->

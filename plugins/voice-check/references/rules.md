@@ -18,7 +18,7 @@ Cut "I can take on," "I could potentially help with," "I'm pushing for this dire
 ### No copula avoidance `[engine + skill]`
 Don't replace "is" with "serves as," "stands as," "acts as," "functions as," "represents," "marks." Just say "is." The engine catches the "as" variants ("serves as", "stands as", "acts as", "functions as") with a word-boundary regex. Nuanced replacements like "represents" are left to the skill.
 
-<!-- voice-check: disable ai_vocab_cluster, puffery, promotional_tone, vocab_2026, bridge_phrases, hedging, vague_attribution, dangling_participle -->
+<!-- voice-check: disable ai_vocab_cluster, puffery, promotional_tone, vocab_2026, bridge_phrases, hedging, vague_attribution, dangling_participle, structure -->
 
 ## AI Vocabulary Cluster (flag when 2+ appear in the same document) `[engine + skill]`
 
@@ -46,18 +46,50 @@ Flag and rewrite: "boasts," "vibrant," "rich" (figurative), "nestled," "in the h
 
 Write neutral, not like ad copy.
 
-## Structural Tells `[skill only]`
+## Structural Tells
 
-- **Rule of three**: Don't default to "X, Y, and Z" triads. Break the pattern.
-- **Negative parallelisms and contrast reframes**: "Not just X, but Y" and "It's not about X, it's about Y." The reframe manufactures insight by setting up a false opposition and resolving it in one move. Also flag overuse of "X rather than Y." Rewrite as a direct claim.
-- **False ranges**: "From X to Y" where no real spectrum exists. Cut.
-- **Challenges-and-future-prospects**: "Despite its [good thing], [subject] faces challenges..." followed by vague optimism. Never.
-- **Bolded inline headers on every bullet**: Use sparingly, not mechanically.
-- **Elegant variation**: Don't swap synonyms to avoid repeating a word. Say "Nick" three times rather than "the engineer," "the technical lead," "the key contributor."
-- **Balanced-debate framing**: "While X has its advantages, it also has some disadvantages." Presenting every topic as a two-sided debate is a tell. Take a position or report the facts.
-- **Uniform sentence rhythm**: every sentence landing in the same length range. Vary it. Some thoughts need three words. Some need a full paragraph.
+- **Rule of three** `[skill only]`: Don't default to "X, Y, and Z" triads. Break the pattern.
+- **Negative parallelisms and contrast reframes** `[engine + skill]`: "Not just X, but Y" and "It's not about X, it's about Y." The reframe manufactures insight by setting up a false opposition and resolving it in one move. Also flag overuse of "X rather than Y." Rewrite as a direct claim.
+- **False ranges** `[engine + skill]`: "From X to Y" where no real spectrum exists. Cut.
 
-These are context-sensitive patterns. The Python engine does not attempt them because a regex cannot reliably tell signal from noise here.
+  The engine matches lowercase plural to lowercase plural, which is what
+  separates a false enumeration ("from startups to enterprises") from an
+  ordinary range ("from 9 to 5"). Gerund pairs such as "from onboarding to
+  offboarding" are missed on purpose: catching them would also fire on "from
+  testing to shipping", which describes a real sequence.
+
+- **Challenges-and-future-prospects** `[engine + skill]`: "Despite its [good thing], [subject] faces challenges..." followed by vague optimism. Never.
+- **Bolded inline headers on every bullet** `[engine + skill]`: Use sparingly, not mechanically.
+- **Elegant variation** `[skill only]`: Don't swap synonyms to avoid repeating a word. Say "Nick" three times rather than "the engineer," "the technical lead," "the key contributor."
+- **Balanced-debate framing** `[engine + skill]`: presenting every topic as a two-sided debate is a tell. Take a position or report the facts.
+
+  Bare word co-occurrence fires on an ordinary pros and cons discussion,
+  which is not the tell, so the engine requires a balancing connective
+  ("but," "yet," "though," "however," "also") sitting between an advantage
+  term and a disadvantage term before it flags the sentence.
+
+- **Uniform sentence rhythm** `[skill only]`: every sentence landing in the
+  same length range. Vary it. Some thoughts need three words. Some need a
+  full paragraph. The engine does not attempt this. Measuring the coefficient
+  of variation of sentence lengths across this repository put a deliberately
+  AI sounding sample at 0.48, between two hand written files at 0.40 and
+  0.41, so no threshold separates them. Technical reference prose is
+  legitimately uniform, and this advice is about narrative writing.
+
+Rule of three and elegant variation stay skill only because telling a
+deliberate pattern from an incidental one needs judgment a regex cannot
+reach. The other five bullets above are now attempted by the Python engine
+too, marked `[engine + skill]`.
+
+Matching a sentence shape instead of a word list carries a cost: some
+ordinary prose has the same shape as the tell. Three of the five engine rows
+have a confirmed false positive shape. `not_just_but` fires on ordinary
+enumeration such as "This library supports not only Python but also Java."
+`false_range` fires on a genuine range built from plural nouns, such as "events from decades to centuries," and it also fires on ordinary migration prose in the same shape, such as "from callbacks to promises." That is the same plural noun to plural noun shape a genuine sequence uses, so an ordinary changelog line describing a migration reads as a false range too.
+`while_also` fires on an ordinary concessive sentence such as "While Sarah wrote the tests, they also fixed the linter." All five rows default to low
+severity, so a hit collapses into one counted summary line instead of
+surfacing on its own; a repo whose prose keeps tripping one of these can
+disable it, reassign its severity, or suppress the line in a supplement.
 
 ## Vague Attributions `[engine + skill]`
 

@@ -14,7 +14,7 @@ The plugin has three layers that must stay in sync:
 2. **Skills** (`plugins/voice-check/skills/`): thin Markdown shells that reference `../../references/rules.md` (two levels up, at the plugin root, NOT inside the skill dir). Two skills with deliberate timing split:
    - `writing-guard/SKILL.md`: proactive, loads *before* Claude drafts prose, self-censors during writing.
    - `voice-check/SKILL.md`: reactive, scans/fixes existing files; also used in report-only mode by the pre-commit hook.
-3. **Python engine** (`plugins/voice-check/engine/`): five modules with an
+3. **Python engine** (`plugins/voice-check/engine/`): six modules with an
    acyclic dependency graph. `voice_check.py` is the CLI entry
    (`--report-only` for hook mode, `--min-severity` for verbosity, `--lines`
    for diff scoping, always exits 0, advisory). `document.py` decides what
@@ -22,8 +22,15 @@ The plugin has three layers that must stay in sync:
    directives parsed from the raw text. `config.py` finds `.claude/voice-check.md`
    by walking up to the git root (first match wins, no aggregation) and parses
    six fenced block kinds. `rules.py` holds the rule table, where every row has
-   a stable id and a severity. `scanner.py` runs rows against a document and
-   applies suppression, severity, and line ranges.
+   a stable id and a severity. `analyzers.py` holds rules that compute over a
+   document rather than matching against it, for properties like the fraction
+   of bullets opening with a bold run that no rule row can express. Its
+   registry entries share the rule row contract, so per repo disable,
+   severity, and suppression apply to analyzers unchanged. `scanner.py` runs
+   rows against a document and applies suppression, severity, and line
+   ranges, then runs the analyzer pass: it validates each analyzer's returned
+   evidence lines and isolates a raising or malformed analyzer so one bad
+   analyzer cannot cost the rule passes or the other analyzers.
 
 Rule ids can shift between releases. A supplement that disables or reassigns severity for a stale id (for example, the removed `ai_vocab_cluster.key` or the renamed `ai_vocab_cluster.align`, now `ai_vocab_cluster.align_with`) prints a warning and otherwise has no effect; see `references/rules.md` for current ids.
 
@@ -39,7 +46,7 @@ Important: the engine duplicates a subset of the markdown rules as code. When ad
 
 ## Commands
 
-Run the engine tests (160 pytest cases across `plugins/voice-check/tests/`):
+Run the engine tests (211 pytest cases across `plugins/voice-check/tests/`):
 
 ```bash
 cd plugins/voice-check

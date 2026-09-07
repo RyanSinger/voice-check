@@ -57,7 +57,9 @@ Both rewritten in third person with concrete trigger terms, per the discovery gu
 1. **2026 vocabulary cluster.** Bare words are `[skill only]`: quietly, shift, matters, shape, land, actually, real, earn, hold, pull, compound, signal, plus the phrase "the work". Too common for word-boundary regex. The skill judges them in context with the existing clustering logic: two or more in a document is a pattern. Phrase-level forms are `[engine + skill]`: "quietly building", "this matters because", "the pull of", "built different", "do the work", "send a signal", "decisions compound".
 2. **Faux-conversational bridges** `[engine + skill]`: "here's the thing", "but here's the truth", "at the end of the day", "don't get me wrong", "let's dive in", "let's delve into", "in this section we will", "we will explore", "let's examine".
 3. **Markup artifacts** `[engine + skill]`: leaked model citation tokens (contentReference, oaicite, turn0search, `[cite:`, grok_card, ppl-ai-file-upload, attached_file) and emoji used as bullet markers.
+<!-- voice-check: disable structure -->
 4. **Amendments to Structural Tells** `[skill only]`: contrast reframes ("It's not about X, it's about Y" manufacturing insight from false opposition), overuse of "X rather than Y", balanced-debate framing ("While X has advantages, it also has disadvantages"), uniform sentence rhythm (every sentence landing in the same length range).
+<!-- voice-check: enable -->
 
 The existing AI vocabulary cluster list stays untouched. Old tells still catch older AI text; removing them weakens the hook with no gain.
 
