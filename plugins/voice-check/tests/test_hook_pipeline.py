@@ -130,13 +130,13 @@ def test_install_hook_renders_engine_path(fresh_repo, fake_home):
 
     # With HOME faked out, fallback 3 (walk-up from template dir) must have
     # resolved to the in-repo engine file.
-    # Extract the resolved engine path from the rendered VOICE_CHECK_ENGINE="..." line
+    # Extract the resolved engine path from the rendered BAKED_ENGINE="..." line
     engine_line = next(
-        (ln for ln in content.splitlines() if ln.startswith("VOICE_CHECK_ENGINE=")),
+        (ln for ln in content.splitlines() if ln.startswith("BAKED_ENGINE=")),
         None,
     )
-    assert engine_line is not None, "rendered hook missing VOICE_CHECK_ENGINE line"
-    # Strip VOICE_CHECK_ENGINE=" ... "
+    assert engine_line is not None, "rendered hook missing BAKED_ENGINE line"
+    # Strip BAKED_ENGINE=" ... "
     rendered_engine = engine_line.split("=", 1)[1].strip().strip('"')
     assert rendered_engine, "rendered engine path is empty"
     assert Path(rendered_engine).is_absolute(), (
