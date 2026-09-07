@@ -78,13 +78,19 @@ def test_config_disable_removes_a_single_row_by_id():
     cfg = config.Config.empty()
     cfg.disabled.append(("puffery.renowned", None))
     assert _scan("our renowned platform\n", cfg) == []
-    assert _scan("a groundbreaking author\n", cfg) != []
+    # "pivotal" fires only puffery.pivotal (a single ai_vocab_cluster word is
+    # below doc_min=2, so that scope stays silent too), so this proves the
+    # by-id disable left its sibling puffery row untouched, rather than
+    # merely proving some unrelated rule fired.
+    assert _scan("a pivotal moment\n", cfg) != []
 
 
 def test_config_severity_override_applies():
     cfg = config.Config.empty()
     cfg.severity["puffery"] = "high"
-    f = _scan("our groundbreaking platform\n", cfg)
+    # "renowned" is puffery only, so this is the single finding produced:
+    # asserting on f[0] stays meaningful regardless of RULES table order.
+    f = _scan("our renowned platform\n", cfg)
     assert f[0]["severity"] == "high"
 
 
@@ -105,6 +111,12 @@ def test_doc_scope_dropped_when_every_occurrence_is_outside_the_ranges():
     text = "additionally the key landscape is pivotal\nplain line\n"
     f = _scan(text, line_ranges=[(2, 2)])
     assert not any(x["rule"] == "ai_vocab_cluster" for x in f)
+
+
+def test_doc_scope_survives_when_only_some_occurrences_are_in_range():
+    text = "additionally the key landscape\nplain line\nis pivotal here\n"
+    f = _scan(text, line_ranges=[(3, 3)])
+    assert any(x["rule"] == "ai_vocab_cluster" for x in f)
 
 
 def test_in_ranges_treats_none_as_everything():
