@@ -866,3 +866,95 @@ def test_clean_file_prints_nothing_and_exits_zero(tmp_path):
     out = _cli("--report-only", str(f))
     assert out.returncode == 0
     assert out.stdout.strip() == ""
+
+
+# --- new leaked token families (2026-09 Wikipedia signs refresh) ------------
+
+
+def _artifacts(tmp_path, text):
+    f = tmp_path / "dirty.md"
+    f.write_text(text)
+    return [x for x in voice_check.scan(f) if x["rule"] == "markup_artifacts"]
+
+
+def test_grok_card_hyphen_form_flagged(tmp_path):
+    """The real Grok artifact is hyphenated. Only the underscore form matched."""
+    assert _artifacts(
+        tmp_path, 'She rose to fame quickly. <grok-card data-id="e8ff4f">\n'
+    )
+
+
+def test_oai_citation_underscore_form_flagged(tmp_path):
+    """Separate token from oaicite, which was the only form matched."""
+    assert _artifacts(
+        tmp_path, "The group launched a roadshow. [oai_citation:0]\n"
+    )
+
+
+def test_turn_image_and_news_and_file_tokens_flagged(tmp_path):
+    for token in ("turn0image1", "turn0news0", "turn1file0"):
+        assert _artifacts(tmp_path, f"A sentence here. cite{token}\n"), token
+
+
+def test_deepseek_lenticular_bracket_token_flagged(tmp_path):
+    assert _artifacts(
+        tmp_path, "Vacancy rates were reported at 6 percent.【85†L261-269】\n"
+    )
+
+
+def test_perplexity_web_token_flagged(tmp_path):
+    assert _artifacts(tmp_path, "The reputation effects are debated.[web:1]\n")
+
+
+def test_writing_variant_document_token_flagged(tmp_path):
+    assert _artifacts(
+        tmp_path, ':::writing{variant="document" id="68427"}\n'
+    )
+
+
+def test_ordinary_prose_with_similar_words_not_flagged(tmp_path):
+    """None of the new families may fire on plain prose that merely
+    resembles them. Each of these contains a substring of a real token."""
+    for text in (
+        "We turned the card over and read it.\n",
+        "The web page loaded in one second.\n",
+        "Writing a variant of the document took an hour.\n",
+        "Please cite the source properly.\n",
+    ):
+        assert _artifacts(tmp_path, text) == [], text
+
+
+# --- incomplete engine install ---------------------------------------------
+
+
+def test_incomplete_engine_install_reports_one_line_and_exits_zero(tmp_path):
+    """A partially populated plugin cache must not dump a traceback into a
+    developer's commit output.
+
+    The imports happen at module load, before main() exists, so the CLI's own
+    exception handler cannot catch them. Reachable via an interrupted plugin
+    upgrade, which leaves some engine modules present and others missing.
+    """
+    import shutil
+
+    src = Path(__file__).parent.parent / "engine"
+    broken = tmp_path / "engine"
+    broken.mkdir()
+    # Everything except config.py, simulating a half written cache.
+    for name in ("voice_check.py", "document.py", "rules.py",
+                 "scanner.py", "analyzers.py"):
+        shutil.copy(src / name, broken / name)
+
+    target = tmp_path / "doc.md"
+    target.write_text("Plain prose with nothing wrong in it.\n")
+
+    out = subprocess.run(
+        [sys.executable, str(broken / "voice_check.py"),
+         "--report-only", str(target)],
+        capture_output=True, text=True,
+    )
+
+    assert out.returncode == 0, out.stderr
+    assert "Traceback" not in out.stderr, out.stderr
+    assert "voice-check:" in out.stderr
+    assert "config" in out.stderr

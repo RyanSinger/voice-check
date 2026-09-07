@@ -11,10 +11,19 @@ import sys
 from pathlib import Path
 from typing import List, Optional
 
-import config
-import document
-import rules
-import scanner
+# A partially populated plugin cache, from an interrupted upgrade, leaves
+# some engine modules present and others missing. That raises at module load,
+# before main() exists, so the handler inside main() cannot catch it and the
+# hook would print a raw traceback into the developer's commit output. Record
+# the failure instead and let main() report it in one line.
+_IMPORT_ERROR = None
+try:
+    import config
+    import document
+    import rules
+    import scanner
+except ImportError as _exc:  # pragma: no cover, exercised by subprocess test
+    _IMPORT_ERROR = _exc
 
 
 def parse_ranges(raw: str) -> Optional[List[tuple]]:
@@ -107,6 +116,16 @@ def format_findings(findings: List[dict], min_severity: str = "medium") -> str:
 
 def main():
     import argparse
+
+    if _IMPORT_ERROR is not None:
+        # Exit 0 rather than 1: an incomplete install must not look like a
+        # finding, and the hook contract holds that a commit never blocks.
+        print(
+            f"voice-check: engine install incomplete ({_IMPORT_ERROR}), "
+            f"skipping scan",
+            file=sys.stderr,
+        )
+        raise SystemExit(0)
 
     parser = argparse.ArgumentParser(prog="voice-check")
     parser.add_argument("file", type=Path, help="Markdown file to scan")

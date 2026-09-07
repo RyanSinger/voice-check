@@ -100,8 +100,10 @@ def test_registry_entry_matches_the_rule_row_contract():
     for entry in analyzers.ANALYZERS:
         for field in ("name", "id", "category", "severity", "fn"):
             assert field in entry, entry
-        assert entry["name"] == "structure"
-        assert entry["id"].startswith("structure.")
+        # Every id is namespaced under its own family name, so disabling the
+        # name reaches the analyzer the way it reaches a rule row. This used
+        # to hardcode "structure", which only held while one analyzer existed.
+        assert entry["id"].startswith(entry["name"] + "."), entry
         assert callable(entry["fn"])
 
 
@@ -261,3 +263,116 @@ def test_known_identifiers_includes_analyzer_names_and_ids():
     """Otherwise disabling an analyzer would warn as an unknown rule."""
     assert "structure" in config.KNOWN_IDENTIFIERS
     assert "structure.bold_headers" in config.KNOWN_IDENTIFIERS
+
+
+# --- embedded artifact analyzer --------------------------------------------
+# Some leaked tokens live inside regions the masker legitimately treats as
+# non prose. A tracking parameter sits inside a URL, which mask_line blanks
+# entirely; a JSON attribution key sits inside double quotes, which the short
+# quote masker blanks. A rule row would never see either, so they need an
+# analyzer, which reads doc.lines raw.
+
+
+def _embedded(text):
+    doc = document.Document.from_markdown(text)
+    return analyzers.embedded_artifacts(doc, config.Config.empty())
+
+
+def _embedded_findings(findings):
+    return [f for f in findings if f["rule_id"] == "markup_artifacts.embedded_tokens"]
+
+
+def test_chatgpt_utm_source_in_a_bare_url_fires():
+    """A rule row cannot see this: mask_line blanks the whole URL."""
+    assert _embedded("Source: https://example.com/a?utm_source=chatgpt.com\n")
+
+
+def test_chatgpt_utm_source_inside_a_markdown_link_fires():
+    assert _embedded("See [the source](https://example.com/a?utm_source=chatgpt.com).\n")
+
+
+def test_openai_and_copilot_and_grok_referrer_fire():
+    for param in (
+        "utm_source=openai",
+        "utm_source=copilot.com",
+        "referrer=grok.com",
+    ):
+        assert _embedded(f"Source: https://example.com/a?{param}\n"), param
+
+
+def test_attributable_index_in_json_fires():
+    """Inside double quotes, so the short quote masker blanks it."""
+    assert _embedded(
+        'She was born in 1939.({"attribution":{"attributableIndex":"1009-1"}})\n'
+    )
+
+
+def test_ordinary_url_stays_silent():
+    assert _embedded("Source: https://example.com/a?page=2&sort=desc\n") == []
+
+
+def test_document_with_no_urls_stays_silent():
+    assert _embedded("Just a paragraph of prose with no links in it.\n") == []
+
+
+def test_prose_mentioning_the_parameter_name_stays_silent():
+    """The tell is the assignment, not the word. Writing about utm_source
+    without an actual value must not fire."""
+    assert _embedded("We strip the utm_source parameter before logging.\n") == []
+
+
+def test_evidence_lines_point_at_the_matching_lines():
+    text = (
+        "A clean opening line.\n"
+        "Source: https://example.com/a?utm_source=chatgpt.com\n"
+        "Another clean line.\n"
+        "Second: https://example.com/b?referrer=grok.com\n"
+    )
+    entries = _embedded(text)
+    assert [e["lines"] for e in entries] == [[2], [4]]
+
+
+def test_one_entry_per_matching_line():
+    text = (
+        "Source: https://example.com/a?utm_source=chatgpt.com\n"
+        "Source: https://example.com/b?utm_source=openai\n"
+    )
+    assert len(_embedded(text)) == 2
+
+
+def test_message_names_the_token_found():
+    entries = _embedded("Source: https://example.com/a?utm_source=chatgpt.com\n")
+    assert "utm_source=chatgpt.com" in entries[0]["message"]
+
+
+def test_registered_under_the_markup_artifacts_family():
+    """Sharing the name means disabling markup_artifacts kills both the
+    citation token row and this analyzer, which is the intent."""
+    entry = next(
+        a for a in analyzers.ANALYZERS
+        if a["id"] == "markup_artifacts.embedded_tokens"
+    )
+    assert entry["name"] == "markup_artifacts"
+    assert entry["severity"] == "high"
+
+
+def test_embedded_analyzer_reaches_the_scanner():
+    f = _embedded_findings(_scan("Source: https://example.com/a?utm_source=chatgpt.com\n"))
+    assert len(f) == 1
+    assert f[0]["severity"] == "high"
+    assert f[0]["line"] == 1
+
+
+def test_config_disable_by_family_name_removes_it():
+    cfg = config.Config.empty()
+    cfg.disabled.append(("markup_artifacts", None))
+    text = "Source: https://example.com/a?utm_source=chatgpt.com\n"
+    assert _embedded_findings(_scan(text, cfg)) == []
+
+
+def test_suppression_directive_drops_it():
+    text = (
+        "Source: https://example.com/a?utm_source=chatgpt.com"
+        " <!-- voice-check: ignore markup_artifacts.embedded_tokens -->\n"
+    )
+    assert _embedded_findings(_scan(text)) == []
