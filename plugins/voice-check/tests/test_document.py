@@ -112,12 +112,12 @@ def test_short_quoted_span_masked():
     assert "groundbreaking" not in out
 
 
-def test_five_word_quote_masks_and_six_word_quote_does_not():
-    five = document.mask_line('he said "one two three four five" today')
-    assert "one two three four five" not in five
-
+def test_six_word_quote_masks_and_seven_word_quote_does_not():
     six = document.mask_line('he said "one two three four five six" today')
-    assert "one two three four five six" in six
+    assert "one two three four five six" not in six
+
+    seven = document.mask_line('he said "one two three four five six seven" today')
+    assert "one two three four five six seven" in seven
 
 
 def test_curly_quotes_are_normalized_and_masked():

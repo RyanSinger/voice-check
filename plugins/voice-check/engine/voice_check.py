@@ -1,9 +1,10 @@
 """voice-check rules engine. Deterministic checks for the pre-commit hook path.
 
-Always advisory: under --report-only this program exits 0 in every case,
-including on malformed configuration, unreadable files, and unexpected
-exceptions. Every degradation path falls toward reporting more, never toward
-silently reporting less.
+Always advisory: under --report-only this program exits 0 in every case
+except a missing target file, which is a usage error reported before any
+scanning takes place. Malformed configuration, unreadable files, and
+unexpected exceptions during a scan all still exit 0. Every degradation path
+falls toward reporting more, never toward silently reporting less.
 """
 import re
 import sys

@@ -4,7 +4,7 @@ The only module that knows about both rules and documents. Applies, in order:
 row selection from config, line scope matching, document scope aggregation,
 suppression, severity tagging, and line range filtering.
 """
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 import rules
 

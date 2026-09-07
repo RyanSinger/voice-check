@@ -31,6 +31,10 @@ def test_mention_inside_short_quotes_is_not_flagged():
     assert _scan('avoid "groundbreaking," in copy\n') == []
 
 
+def test_the_longest_banned_expression_can_be_quoted():
+    assert _scan('avoid "at the end of the day," in copy\n') == []
+
+
 def test_use_outside_quotes_is_still_flagged():
     f = _scan("our groundbreaking platform\n")
     assert any(x["rule"] == "puffery" for x in f)
@@ -123,3 +127,11 @@ def test_in_ranges_treats_none_as_everything():
     assert scanner.in_ranges(5, None) is True
     assert scanner.in_ranges(5, [(1, 3)]) is False
     assert scanner.in_ranges(2, [(1, 3)]) is True
+
+
+def test_excluded_path_returns_no_findings_while_others_still_scan():
+    cfg = config.Config.empty()
+    cfg.exclude.append("docs/vendor/**")
+    text = "The plan is simple — ship it.\n"
+    assert _scan(text, cfg, rel_path="docs/vendor/a.md") == []
+    assert _scan(text, cfg, rel_path="docs/guide.md") != []

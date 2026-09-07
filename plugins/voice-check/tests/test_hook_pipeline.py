@@ -10,7 +10,9 @@ directory of the checkout. All work happens in pytest `tmp_path`.
 
 Stdlib only.
 """
+import json
 import os
+import shutil
 import stat
 import subprocess
 import sys
@@ -23,6 +25,8 @@ PLUGIN_ROOT = Path(__file__).parent.parent
 TEMPLATES_DIR = PLUGIN_ROOT / "templates"
 INSTALL_HOOK = TEMPLATES_DIR / "install-hook.sh"
 PRE_COMMIT_TEMPLATE = TEMPLATES_DIR / "pre-commit.sh"
+HEALER_SCRIPT = PLUGIN_ROOT / "hooks" / "heal-hook.sh"
+PLUGIN_JSON = PLUGIN_ROOT / ".claude-plugin" / "plugin.json"
 ENGINE_FILE = PLUGIN_ROOT / "engine" / "voice_check.py"
 
 MARKER_START = "# === voice-check section start ==="
@@ -303,3 +307,174 @@ def test_hook_still_exits_zero_on_a_clean_staged_file(fresh_repo, fake_home):
     _stage_file(fresh_repo, "doc.md", "clean prose here\n")
     out = _run_hook(fresh_repo)
     assert out.returncode == 0
+
+
+# ---------------------------------------------------------------------------
+# Working tree vs. index divergence
+# ---------------------------------------------------------------------------
+
+def test_hook_falls_back_to_whole_file_scan_when_working_tree_differs_from_index(
+    fresh_repo, fake_home
+):
+    """Diff ranges describe the STAGED (index) blob's line numbers. If the
+    working tree copy has since drifted from what is staged, for example
+    more edits after `git add -p`, those line numbers no longer point at
+    the right lines in the file the engine actually reads from disk. The
+    hook must fall back to a whole file scan rather than report findings
+    against the wrong lines."""
+    _run_installer(fresh_repo, fake_home)
+
+    _stage_file(fresh_repo, "doc.md", "line one\nline two\n")
+    subprocess.run(
+        ["git", "-C", str(fresh_repo), "commit", "-q", "-m", "seed", "--no-verify"],
+        check=True,
+        env=_git_env(),
+    )
+
+    # Stage a change to line 2 only.
+    _stage_file(fresh_repo, "doc.md", "line one\nsecond line changed — here\n")
+    # Then edit the working tree further without staging, introducing a
+    # violation on line 1 that the staged diff knows nothing about.
+    (fresh_repo / "doc.md").write_text(
+        "first line groundbreaking\nsecond line changed — here\n"
+    )
+
+    out = _run_hook(fresh_repo)
+    assert out.returncode == 0
+    combined = out.stdout + out.stderr
+    assert "puffery" in combined
+    assert "no_dashes" in combined
+
+
+# ---------------------------------------------------------------------------
+# git unavailable fallback (spec Testing section)
+# ---------------------------------------------------------------------------
+
+def test_hook_falls_back_to_whole_file_scan_when_diff_cached_fails(fresh_repo, fake_home):
+    """When `git diff --cached -U0` cannot succeed, the hook must still
+    exit 0 and still produce findings, falling back to a whole file scan.
+    A `git` wrapper earlier on PATH fails only calls carrying `-U0`, so the
+    initial `git diff --cached --name-only` staged file listing still
+    succeeds and the file still gets scanned."""
+    _run_installer(fresh_repo, fake_home)
+
+    _stage_file(fresh_repo, "dirty.md", "This groundbreaking release ships today.\n")
+
+    real_git = shutil.which("git")
+    assert real_git, "git must be on PATH to run this test"
+
+    fake_bin = fresh_repo.parent / "fakebin"
+    fake_bin.mkdir(exist_ok=True)
+    fake_git = fake_bin / "git"
+    fake_git.write_text(
+        "#!/usr/bin/env bash\n"
+        'for a in "$@"; do\n'
+        '  if [ "$a" = "-U0" ]; then\n'
+        "    echo 'fatal: simulated git diff failure' >&2\n"
+        "    exit 128\n"
+        "  fi\n"
+        "done\n"
+        f'exec "{real_git}" "$@"\n'
+    )
+    fake_git.chmod(0o755)
+
+    env = _git_env()
+    env["VOICE_CHECK_PYTHON"] = sys.executable
+    env["PATH"] = f"{fake_bin}{os.pathsep}{env['PATH']}"
+
+    result = subprocess.run(
+        ["bash", str(_hook_path(fresh_repo))],
+        cwd=str(fresh_repo),
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+
+    assert result.returncode == 0
+    combined = result.stdout + result.stderr
+    assert "--- dirty.md ---" in combined
+    assert "puffery" in combined
+
+
+# ---------------------------------------------------------------------------
+# Hook version stamp: the healer reinstalls a stale hook body even when its
+# baked engine path is still live
+# ---------------------------------------------------------------------------
+
+def _plugin_version():
+    return json.loads(PLUGIN_JSON.read_text())["version"]
+
+
+def _run_healer(cwd, home):
+    return subprocess.run(
+        ["bash", str(HEALER_SCRIPT)],
+        cwd=str(cwd),
+        capture_output=True,
+        text=True,
+        env={**os.environ, "HOME": str(home), "CLAUDE_PLUGIN_ROOT": str(PLUGIN_ROOT)},
+    )
+
+
+def _hook_with_stamp(engine, version):
+    return (
+        "#!/usr/bin/env bash\n"
+        "# === voice-check section start ===\n"
+        f"# voice-check hook version: {version}\n"
+        f'BAKED_ENGINE="{engine}"\n'
+        'if [ ! -f "$BAKED_ENGINE" ]; then\n'
+        '  echo "voice-check: engine not found at $BAKED_ENGINE"\n'
+        "  exit 0\n"
+        "fi\n"
+        "exit 0\n"
+        "# === voice-check section end ===\n"
+    )
+
+
+def _install_hook_text(repo, text):
+    hooks_dir = repo / ".git" / "hooks"
+    hooks_dir.mkdir(parents=True, exist_ok=True)
+    hook = hooks_dir / "pre-commit"
+    hook.write_text(text)
+    hook.chmod(hook.stat().st_mode | stat.S_IXUSR)
+    return hook
+
+
+def test_healer_reinstalls_when_version_stamp_is_stale(tmp_path):
+    """A hook whose baked engine path is still live but whose version stamp
+    is older than the plugin's own version must still be reinstalled, so a
+    hook body change (like the diff scoping added in this release) is not
+    held hostage to the engine path ever going dead."""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    subprocess.run(["git", "init", "-q", str(repo)], check=True, env=_git_env())
+
+    live_engine = ENGINE_FILE
+    _install_hook_text(repo, _hook_with_stamp(live_engine, "0.0.1"))
+
+    home = tmp_path / "home"
+    home.mkdir()
+    result = _run_healer(repo, home)
+    assert result.returncode == 0
+    assert "healed" in result.stdout
+
+    text = (repo / ".git" / "hooks" / "pre-commit").read_text()
+    assert f"# voice-check hook version: {_plugin_version()}" in text
+
+
+def test_healer_noop_when_version_stamp_is_current(tmp_path):
+    """A hook whose stamp already matches the plugin's version, and whose
+    engine path is live, must be left untouched."""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    subprocess.run(["git", "init", "-q", str(repo)], check=True, env=_git_env())
+
+    live_engine = ENGINE_FILE
+    hook = _install_hook_text(repo, _hook_with_stamp(live_engine, _plugin_version()))
+    before = hook.read_bytes()
+
+    home = tmp_path / "home"
+    home.mkdir()
+    result = _run_healer(repo, home)
+    assert result.returncode == 0
+    assert "healed" not in result.stdout
+    assert hook.read_bytes() == before

@@ -86,7 +86,12 @@ URL_RE = re.compile(r"(?:https?://|www\.)\S+")
 QUOTED_RE = re.compile(r'"[^"\n]*"')
 BLOCKQUOTE_RE = re.compile(r"^\s*>")
 
-QUOTE_WORD_LIMIT = 6
+# The window must exceed the word count of the longest expression the
+# engine can match, so that any banned expression can still be quoted as a
+# mention. The longest is the six word "at the end of the day," so the
+# limit is seven: with a strict less-than comparison, a six word quote
+# masks and a seven word quote does not.
+QUOTE_WORD_LIMIT = 7
 
 
 def _mask_short_quotes(line: str) -> str:

@@ -2,6 +2,7 @@
 # voice-check pre-commit hook (advisory, report-only)
 # Installed by: voice-check plugin install-hook.sh
 # === voice-check section start ===
+# voice-check hook version: 2.3.0
 
 set -e
 
@@ -81,6 +82,19 @@ while IFS= read -r f; do
   fi
 
   ranges=$(changed_ranges "$f")
+
+  # changed_ranges reports line numbers in the STAGED (index) blob, but the
+  # engine reads the file from the WORKING TREE. Those line numbers only
+  # line up when the two copies match. If a file was staged with `git add
+  # -p` and then edited further, or staged and then edited again without
+  # re-staging, the working tree has diverged from the index and the range
+  # would point at the wrong lines. Clear it so the existing empty-ranges
+  # branch below falls back to a whole file scan: this degrades toward
+  # reporting more, which is this project's stated principle.
+  if [ -n "$ranges" ] && ! git diff --quiet -- "$f"; then
+    ranges=""
+  fi
+
   if [ -n "$ranges" ]; then
     out=$("$PYTHON" "$ENGINE" --report-only --lines "$ranges" "$f" 2>&1 || true)
   else

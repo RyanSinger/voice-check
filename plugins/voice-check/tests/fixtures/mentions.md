@@ -9,4 +9,4 @@ is banned, as is copula avoidance ("serves as," "stands as").
 
 See https://example.com/state-of-the-art-review for details.
 
-Inline mentions of `key`, `align`, and `additionally` are code, not prose.
+Inline mentions of `crucial`, `delve`, and `tapestry` are code, not prose.

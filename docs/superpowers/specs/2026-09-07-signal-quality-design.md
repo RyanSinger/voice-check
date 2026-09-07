@@ -83,7 +83,7 @@ Line level masking then runs on the remainder:
 
 ### Quoted span policy
 
-A quoted span is masked when its content holds fewer than six words. Longer quotations stay scanned, on the reasoning that a quoted paragraph is usually the author's own pull quote rather than a mention.
+A quoted span is masked when its content holds fewer than seven words. Longer quotations stay scanned, on the reasoning that a quoted paragraph is usually the author's own pull quote rather than a mention. Seven is one more than the word count of the longest expression the engine can match, "at the end of the day," so that expression can still be quoted as a mention rather than firing the rule that bans it.
 
 Only double quotes participate, both straight and curly. Single quotes are deliberately excluded because apostrophes make them ambiguous: in the text `it's a 'test' case`, a naive single quote pattern matches the span `s a `, masking real prose.
 
@@ -266,7 +266,7 @@ This specification file itself is a usable fixture for both: before Phase 1 it r
 
 ### Unit coverage
 
-- `document.py`: one positive and one negative per mask kind; the six word boundary (five words masks, six does not); single quotes deliberately unmasked, using `it's a 'test' case`; link text scanned while link target is masked; a column alignment assertion proving `col` still points at the correct character after masking
+- `document.py`: one positive and one negative per mask kind; the seven word boundary (six words masks, seven does not); single quotes deliberately unmasked, using `it's a 'test' case`; link text scanned while link target is masked; a column alignment assertion proving `col` still points at the correct character after masking
 - `config.py`: each new block kind; path scoped disable; unknown rule id warns without failing; one bad line does not discard the rest of the config; invalid regex dropped with a warning
 - Suppression: line form, block form, unterminated block running to end of file, rule name versus rule id arguments, and a directive inside a fenced code block having no effect
 - Severity: default assignment per rule, config override, threshold filtering, collapse line format

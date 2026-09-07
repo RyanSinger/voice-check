@@ -19,7 +19,7 @@ Every engine row carries a stable id of the form `<name>.<slug>`, for example `p
 - **Promotional tone [engine]:** "boasts," "nestled in the heart of," "vibrant," "showcasing," "commitment to"
 - **Dangling participles [engine]:** comma followed by gerund phrases like "...highlighting the importance of," "...ensuring that," "...fostering growth"
 - **Vague attributions [engine]:** "experts say," "experts agree," "industry observers note," "sources say," "many believe"
-- **Faux-conversational bridges [engine]:** "here's the thing," "at the end of the day," "let's dive in," "we will explore" <!-- voice-check: ignore bridge_phrases -->
+- **Faux-conversational bridges [engine]:** "here's the thing," "at the end of the day," "let's dive in," "we will explore"
 - **2026 vocabulary [engine for phrases, skill for bare words]:** "quietly building," "this matters because," "built different," "decisions compound"; bare words (quietly, shift, matters, signal, compound) are judged in context by the skill
 - **Markup artifacts [engine]:** leaked citation tokens (contentReference, oaicite, [cite:, grok_card, ppl-ai-file-upload), emoji used as bullet markers <!-- voice-check: ignore markup_artifacts -->
 - **Structural tells [skill]:** rule of three, negative parallelism, false ranges, challenges-and-future-prospects, elegant variation
@@ -76,7 +76,7 @@ name or id, and exclude paths entirely. See `references/rules.md`.
 
 The engine masks text that is not prose before matching: fenced code, inline
 code, YAML frontmatter, HTML comments, URLs, markdown link targets,
-blockquotes, and double quoted spans under six words. Writing about a banned
+blockquotes, and double quoted spans under seven words. Writing about a banned
 word in quotes no longer trips the rule that bans it.
 
 Single quotes never mask, because apostrophes make them ambiguous.

@@ -565,6 +565,28 @@ exit 0
 # === voice-check section end ===
 """
 
+# A hook carrying the current version stamp, otherwise identical in shape to
+# a freshly installed hook. Used to prove the healer leaves an already
+# current hook alone, distinct from OLD_STYLE_HOOK above, which predates the
+# stamp and is therefore always stale under the version check.
+CURRENT_STYLE_HOOK = """#!/usr/bin/env bash
+# === voice-check section start ===
+# voice-check hook version: {version}
+BAKED_ENGINE="{engine}"
+if [ ! -f "$BAKED_ENGINE" ]; then
+  echo "voice-check: engine not found at $BAKED_ENGINE"
+  exit 0
+fi
+exit 0
+# === voice-check section end ===
+"""
+
+
+def _plugin_version():
+    import json
+    data = json.loads((PLUGIN_ROOT / ".claude-plugin" / "plugin.json").read_text())
+    return data["version"]
+
 
 def _run_healer(cwd, home):
     return subprocess.run(
@@ -589,10 +611,17 @@ def test_healer_replaces_stale_section(tmp_path):
 
 
 def test_healer_noop_when_baked_path_healthy(tmp_path):
+    """Healthy now means both a live engine path AND a current version
+    stamp. OLD_STYLE_HOOK predates the stamp, so it no longer represents a
+    healthy hook (fixed by test_healer_reinstalls_stale_version_stamp
+    below); this test uses CURRENT_STYLE_HOOK instead."""
     home = _make_fake_home(tmp_path, ["2.2.0"])
     live = (home / ".claude" / "plugins" / "cache" / "voice-check"
             / "voice-check" / "2.2.0" / "engine" / "voice_check.py")
-    repo = _make_repo(tmp_path, OLD_STYLE_HOOK.format(engine=live))
+    repo = _make_repo(
+        tmp_path,
+        CURRENT_STYLE_HOOK.format(version=_plugin_version(), engine=live),
+    )
     before = (repo / ".git" / "hooks" / "pre-commit").read_bytes()
     result = _run_healer(repo, home)
     assert result.returncode == 0
@@ -764,6 +793,7 @@ def test_low_severity_finding_collapses_by_default(tmp_path):
     f = tmp_path / "d.md"
     f.write_text("additionally the key landscape is pivotal\n")
     out = _cli("--report-only", str(f))
+    assert out.returncode == 0
     assert "below medium severity" in out.stdout
     assert "ai_vocab_cluster" in out.stdout
     assert "occurrences across" not in out.stdout
@@ -773,6 +803,7 @@ def test_min_severity_low_prints_everything(tmp_path):
     f = tmp_path / "d.md"
     f.write_text("additionally the key landscape is pivotal\n")
     out = _cli("--report-only", "--min-severity", "low", str(f))
+    assert out.returncode == 0
     assert "occurrences across" in out.stdout
     assert "below medium severity" not in out.stdout
 
@@ -781,6 +812,7 @@ def test_min_severity_high_collapses_medium_findings(tmp_path):
     f = tmp_path / "d.md"
     f.write_text("our groundbreaking platform\n")
     out = _cli("--report-only", "--min-severity", "high", str(f))
+    assert out.returncode == 0
     assert "below high severity" in out.stdout
     assert "Show importance through specifics" not in out.stdout
 
@@ -789,6 +821,7 @@ def test_lines_flag_restricts_line_scope_findings(tmp_path):
     f = tmp_path / "d.md"
     f.write_text("a — b\nc — d\n")
     out = _cli("--report-only", "--lines", "2-2", str(f))
+    assert out.returncode == 0
     assert "line 2" in out.stdout
     assert "line 1" not in out.stdout
 

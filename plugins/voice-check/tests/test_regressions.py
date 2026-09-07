@@ -47,12 +47,22 @@ def test_engine_reports_nothing_on_its_own_spec():
 
 
 def test_doc_scope_ignores_words_inside_inline_code():
-    """Defect 6: doc scope used to skip inline code masking."""
+    """Defect 6: doc scope used to skip inline code masking.
+
+    "crucial", "delve", and "tapestry" are live cluster and puffery members,
+    unlike "key", "align", and "additionally", whose rules were narrowed in
+    a later task so none of them can fire in a plain sentence any more. With
+    inline code masking removed, this exact sentence reports
+    ['puffery', 'ai_vocab_cluster']; masked, it reports nothing. That is
+    what pins the defect.
+    """
     import document
     import config
     import scanner
 
-    doc = document.Document.from_markdown("uses `key` and `align` and `additionally`\n")
+    doc = document.Document.from_markdown(
+        "uses `crucial` and `delve` and `tapestry`\n"
+    )
     findings = scanner.scan(doc, config.Config.empty(), "a.md")
     assert findings == []
 
