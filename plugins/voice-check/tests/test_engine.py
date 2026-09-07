@@ -74,6 +74,44 @@ def test_three_ai_vocab_words_flagged(tmp_path):
     assert len(cluster_findings) == 1
 
 
+def test_additionally_fires_only_when_sentence_initial(tmp_path):
+    """rules.md documents this member as "Additionally (starting
+    sentences)," not a bare word. A bullet list item is one of the most
+    common places a sentence starts, and mask_line reduces its marker to a
+    single leading space, so that case must fire too. "pivotal" is the
+    second cluster word each case needs to clear doc_min=2.
+    """
+    f = tmp_path / "dirty.md"
+    f.write_text("- Additionally, this shift is pivotal.\n")
+    findings = voice_check.scan(f)
+    cluster_findings = [x for x in findings if x["rule"] == "ai_vocab_cluster"]
+    assert len(cluster_findings) == 1
+
+    g = tmp_path / "ok.md"
+    g.write_text("We should additionally consider this pivotal detail.\n")
+    findings = voice_check.scan(g)
+    cluster_findings = [x for x in findings if x["rule"] == "ai_vocab_cluster"]
+    assert cluster_findings == []
+
+
+def test_align_with_fires_only_as_adjacent_phrase(tmp_path):
+    """rules.md documents this member as "align with," not bare "align."
+    "pivotal" is the second cluster word each case needs to clear
+    doc_min=2, so each result isolates whether "align" itself counted.
+    """
+    f = tmp_path / "dirty.md"
+    f.write_text("Align with the schema before shipping; this detail is pivotal.\n")
+    findings = voice_check.scan(f)
+    cluster_findings = [x for x in findings if x["rule"] == "ai_vocab_cluster"]
+    assert len(cluster_findings) == 1
+
+    g = tmp_path / "ok.md"
+    g.write_text("Align the config with the schema; this detail is pivotal.\n")
+    findings = voice_check.scan(g)
+    cluster_findings = [x for x in findings if x["rule"] == "ai_vocab_cluster"]
+    assert cluster_findings == []
+
+
 def test_puffery_word_flagged(tmp_path):
     f = tmp_path / "dirty.md"
     f.write_text("This is a groundbreaking system.\n")
@@ -88,32 +126,6 @@ def test_promotional_phrase_flagged(tmp_path):
     findings = voice_check.scan(f)
     promo = [f for f in findings if f["rule"] == "promotional_tone"]
     assert len(promo) >= 1
-
-
-def test_find_supplement_walks_up_to_git_root(tmp_path):
-    # Create a fake git repo with a nested structure
-    (tmp_path / ".git").mkdir()
-    (tmp_path / ".claude").mkdir()
-    (tmp_path / ".claude" / "voice-check.md").write_text("# supplement\n")
-    nested = tmp_path / "deep" / "nested" / "dir"
-    nested.mkdir(parents=True)
-    target = nested / "doc.md"
-    target.write_text("hello\n")
-
-    sys.path.insert(0, str(Path(__file__).parent.parent / 'engine'))
-    import supplement
-    result = supplement.find_for(target)
-    assert result == tmp_path / ".claude" / "voice-check.md"
-
-
-def test_find_supplement_returns_none_when_absent(tmp_path):
-    (tmp_path / ".git").mkdir()
-    target = tmp_path / "doc.md"
-    target.write_text("hello\n")
-
-    import supplement
-    result = supplement.find_for(target)
-    assert result is None
 
 
 import subprocess
@@ -144,21 +156,6 @@ def test_cli_dirty_file_reports_findings():
     assert result.returncode == 0
     assert "no_dashes" in result.stdout or "ai_vocab" in result.stdout or "puffery" in result.stdout
     assert len(result.stdout) > 0
-
-
-def test_find_supplement_stops_at_git_root(tmp_path):
-    # Supplement above the git root should NOT be found
-    (tmp_path / ".claude").mkdir()
-    (tmp_path / ".claude" / "voice-check.md").write_text("# outer\n")
-    inner_repo = tmp_path / "subrepo"
-    inner_repo.mkdir()
-    (inner_repo / ".git").mkdir()
-    target = inner_repo / "doc.md"
-    target.write_text("hello\n")
-
-    import supplement
-    result = supplement.find_for(target)
-    assert result is None
 
 
 # ---------------------------------------------------------------------------
@@ -324,26 +321,6 @@ def test_clean_fixture_structural_cases_pass(tmp_path):
     fixture = Path(__file__).parent / "fixtures" / "clean.md"
     findings = voice_check.scan(fixture)
     assert findings == [], f"clean fixture produced findings: {findings}"
-
-
-def test_supplement_load_rows_parses_all_kinds(tmp_path):
-    p = tmp_path / "voice-check.md"
-    p.write_text(
-        "```voice-check-words\n"
-        "foo\n"
-        "```\n"
-        "```voice-check-phrases\n"
-        "bar baz\n"
-        "```\n"
-        "```voice-check-regex\n"
-        "\\bqux\\d+\\b\n"
-        "```\n"
-    )
-    import supplement
-    rows = supplement.load_rows(p)
-    kinds = sorted({r["kind"] for r in rows})
-    assert kinds == ["phrase", "regex", "word"]
-    assert all(r["name"].startswith("supplement:") for r in rows)
 
 
 # ---------------------------------------------------------------------------
@@ -588,6 +565,28 @@ exit 0
 # === voice-check section end ===
 """
 
+# A hook carrying the current version stamp, otherwise identical in shape to
+# a freshly installed hook. Used to prove the healer leaves an already
+# current hook alone, distinct from OLD_STYLE_HOOK above, which predates the
+# stamp and is therefore always stale under the version check.
+CURRENT_STYLE_HOOK = """#!/usr/bin/env bash
+# === voice-check section start ===
+# voice-check hook version: {version}
+BAKED_ENGINE="{engine}"
+if [ ! -f "$BAKED_ENGINE" ]; then
+  echo "voice-check: engine not found at $BAKED_ENGINE"
+  exit 0
+fi
+exit 0
+# === voice-check section end ===
+"""
+
+
+def _plugin_version():
+    import json
+    data = json.loads((PLUGIN_ROOT / ".claude-plugin" / "plugin.json").read_text())
+    return data["version"]
+
 
 def _run_healer(cwd, home):
     return subprocess.run(
@@ -612,10 +611,17 @@ def test_healer_replaces_stale_section(tmp_path):
 
 
 def test_healer_noop_when_baked_path_healthy(tmp_path):
+    """Healthy now means both a live engine path AND a current version
+    stamp. OLD_STYLE_HOOK predates the stamp, so it no longer represents a
+    healthy hook (fixed by test_healer_reinstalls_stale_version_stamp
+    below); this test uses CURRENT_STYLE_HOOK instead."""
     home = _make_fake_home(tmp_path, ["2.2.0"])
     live = (home / ".claude" / "plugins" / "cache" / "voice-check"
             / "voice-check" / "2.2.0" / "engine" / "voice_check.py")
-    repo = _make_repo(tmp_path, OLD_STYLE_HOOK.format(engine=live))
+    repo = _make_repo(
+        tmp_path,
+        CURRENT_STYLE_HOOK.format(version=_plugin_version(), engine=live),
+    )
     before = (repo / ".git" / "hooks" / "pre-commit").read_bytes()
     result = _run_healer(repo, home)
     assert result.returncode == 0
@@ -704,3 +710,159 @@ def test_healer_heals_from_main_checkout_subdir(tmp_path):
     assert "healed" in result.stdout
     text = (repo / ".git" / "hooks" / "pre-commit").read_text()
     assert "resolve_engine" in text
+
+
+import rules  # noqa: E402
+
+
+def test_every_rule_row_has_a_unique_id():
+    ids = [r["id"] for r in rules.RULES]
+    assert len(ids) == len(set(ids)), "duplicate rule ids found"
+    assert all(ids), "some rule row has an empty id"
+
+
+def test_every_rule_row_has_a_valid_severity():
+    for r in rules.RULES:
+        assert r["severity"] in rules.SEVERITY_ORDER, r["id"]
+
+
+def test_word_rows_derive_readable_ids():
+    by_id = {r["id"] for r in rules.RULES}
+    assert "puffery.groundbreaking" in by_id
+    assert "hedging.would_like_to" in by_id
+
+
+def test_regex_rows_carry_explicit_ids():
+    by_id = {r["id"] for r in rules.RULES}
+    assert "no_dashes.em_en" in by_id
+    assert "no_dashes.spaced_hyphen" in by_id
+
+
+def test_default_severity_assignments():
+    sev = {r["name"]: r["severity"] for r in rules.RULES}
+    assert sev["no_dashes"] == "high"
+    assert sev["markup_artifacts"] == "high"
+    assert sev["ai_vocab_cluster"] == "low"
+    assert sev["puffery"] == "medium"
+
+
+def test_dead_backcompat_shims_are_gone():
+    for name in (
+        "check_dashes", "check_puffery", "check_promotional",
+        "check_ai_vocab_cluster", "AI_VOCAB_CLUSTER",
+        "PUFFERY_WORDS", "PROMOTIONAL_PHRASES",
+    ):
+        assert not hasattr(rules, name), f"{name} should have been deleted"
+
+
+import subprocess  # noqa: E402
+
+ENGINE = str(Path(__file__).parent.parent / "engine" / "voice_check.py")
+
+
+def _cli(*args):
+    return subprocess.run(
+        [sys.executable, ENGINE, *args],
+        capture_output=True, text=True,
+    )
+
+
+def test_parse_ranges_reads_a_comma_separated_list():
+    assert voice_check.parse_ranges("12-18,40-41") == [(12, 18), (40, 41)]
+
+
+def test_parse_ranges_accepts_a_single_line():
+    assert voice_check.parse_ranges("7") == [(7, 7)]
+
+
+def test_parse_ranges_returns_none_on_garbage():
+    assert voice_check.parse_ranges("not-a-range") is None
+    assert voice_check.parse_ranges("") is None
+
+
+def test_high_severity_finding_prints_in_full(tmp_path):
+    f = tmp_path / "d.md"
+    f.write_text("The plan is simple — ship it.\n")
+    out = _cli("--report-only", str(f))
+    assert out.returncode == 0
+    assert "no_dashes" in out.stdout
+    assert "line 1" in out.stdout
+
+
+def test_low_severity_finding_collapses_by_default(tmp_path):
+    f = tmp_path / "d.md"
+    f.write_text("additionally the key landscape is pivotal\n")
+    out = _cli("--report-only", str(f))
+    assert out.returncode == 0
+    assert "below medium severity" in out.stdout
+    assert "ai_vocab_cluster" in out.stdout
+    assert "occurrences across" not in out.stdout
+
+
+def test_min_severity_low_prints_everything(tmp_path):
+    f = tmp_path / "d.md"
+    f.write_text("additionally the key landscape is pivotal\n")
+    out = _cli("--report-only", "--min-severity", "low", str(f))
+    assert out.returncode == 0
+    assert "occurrences across" in out.stdout
+    assert "below medium severity" not in out.stdout
+
+
+def test_min_severity_high_collapses_medium_findings(tmp_path):
+    f = tmp_path / "d.md"
+    f.write_text("our groundbreaking platform\n")
+    out = _cli("--report-only", "--min-severity", "high", str(f))
+    assert out.returncode == 0
+    assert "below high severity" in out.stdout
+    assert "Show importance through specifics" not in out.stdout
+
+
+def test_lines_flag_restricts_line_scope_findings(tmp_path):
+    f = tmp_path / "d.md"
+    f.write_text("a — b\nc — d\n")
+    out = _cli("--report-only", "--lines", "2-2", str(f))
+    assert out.returncode == 0
+    assert "line 2" in out.stdout
+    assert "line 1" not in out.stdout
+
+
+def test_malformed_lines_flag_warns_and_scans_whole_file(tmp_path):
+    f = tmp_path / "d.md"
+    f.write_text("a — b\nc — d\n")
+    out = _cli("--report-only", "--lines", "garbage", str(f))
+    assert out.returncode == 0
+    assert "line 1" in out.stdout
+    assert "line 2" in out.stdout
+    assert "garbage" in out.stderr
+
+
+def test_non_utf8_file_does_not_crash(tmp_path):
+    f = tmp_path / "d.md"
+    f.write_bytes(b"\xff\xfe binary junk \x00\x01\n")
+    out = _cli("--report-only", str(f))
+    assert out.returncode == 0
+
+
+def test_config_warnings_print_to_stderr(tmp_path):
+    (tmp_path / ".git").mkdir()
+    d = tmp_path / ".claude"
+    d.mkdir()
+    (d / "voice-check.md").write_text("```voice-check-regex\n[unclosed\n```\n")
+    f = tmp_path / "d.md"
+    f.write_text("plain text\n")
+    out = _cli("--report-only", str(f))
+    assert out.returncode == 0
+    assert "unclosed" in out.stderr
+
+
+def test_missing_file_exits_two():
+    out = _cli("--report-only", "/nonexistent/nope.md")
+    assert out.returncode == 2
+
+
+def test_clean_file_prints_nothing_and_exits_zero(tmp_path):
+    f = tmp_path / "c.md"
+    f.write_text("The plan is simple. Ship it. Iterate on real usage.\n")
+    out = _cli("--report-only", str(f))
+    assert out.returncode == 0
+    assert out.stdout.strip() == ""

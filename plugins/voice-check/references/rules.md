@@ -18,11 +18,15 @@ Cut "I can take on," "I could potentially help with," "I'm pushing for this dire
 ### No copula avoidance `[engine + skill]`
 Don't replace "is" with "serves as," "stands as," "acts as," "functions as," "represents," "marks." Just say "is." The engine catches the "as" variants ("serves as", "stands as", "acts as", "functions as") with a word-boundary regex. Nuanced replacements like "represents" are left to the skill.
 
+<!-- voice-check: disable ai_vocab_cluster, puffery, promotional_tone, vocab_2026, bridge_phrases, hedging, vague_attribution, dangling_participle -->
+
 ## AI Vocabulary Cluster (flag when 2+ appear in the same document) `[engine + skill]`
 
 Additionally (starting sentences), align with, crucial, delve, emphasizing, enduring, enhance, fostering, garner, highlight (as verb), interplay, intricate/intricacies, key (as adjective), landscape (abstract noun), pivotal, showcase, tapestry (abstract noun), testament, underscore (as verb), valuable, vibrant.
 
 One might be fine. Two or more in the same document is a pattern. Replace with plain language.
+
+`key (as adjective)` is skill only. Telling the adjective "a key decision" apart from the plain noun "an API key" needs part of speech judgment that a regex cannot make, so the engine omits `key` from its cluster list entirely and leaves it to the skill.
 
 ## Puffery and Significance Language `[engine + skill]`
 
@@ -81,6 +85,8 @@ Leaked model citation tokens are proof of unedited AI output. Flag and delete: `
 
 Emoji used as bullet markers (an emoji starting a line as if it were a list marker) is also flagged. Use standard list markers. Artifacts quoted inside fenced code blocks are not flagged.
 
+<!-- voice-check: enable -->
+
 ## Per-repo supplements
 
 In addition to the rules above, the engine loads extra rows from a per-repo `.claude/voice-check.md` supplement file. Authors add banned words, phrases, or regex patterns by embedding fenced code blocks with one of these info strings:
@@ -89,6 +95,37 @@ In addition to the rules above, the engine loads extra rows from a per-repo `.cl
 voice-check-words      one word per line, matched with word boundaries
 voice-check-phrases    one literal phrase per line, matched case-insensitive
 voice-check-regex      one raw regex per line, matched case-insensitive
+voice-check-disable    rule name or id, optionally "<rule> in <path glob>"
+voice-check-severity   "<rule name or id> = high|medium|low"
+voice-check-exclude    one path glob per line, skipped entirely
 ```
 
-Each non-blank, non-comment line inside such a block becomes a supplement rule row appended to the scanner table at scan time. Findings from supplement rules carry the rule name `supplement:<kind>` so they are attributable.
+Each non-blank, non-comment line inside a `voice-check-words`, `voice-check-phrases`, or `voice-check-regex` block becomes a supplement rule row appended to the scanner table at scan time. Findings from supplement rules carry the rule name `supplement:<kind>` so they are attributable.
+
+`voice-check-disable`, `voice-check-severity`, and `voice-check-exclude` change how existing rows are treated instead of adding new ones. A disable entry can name a rule by its plain name (every row under that name) or by a single stable id, and can optionally scope itself to one path glob with `in`. A severity entry reassigns a rule's default severity the same way. An exclude entry is a path glob, matched with `fnmatch` semantics where `*` also matches a path separator, so `docs/vendor/**` covers `docs/vendor/a/b.md`. A bad line is skipped and recorded as a warning; the rest of the supplement still loads.
+
+Rule ids can change between releases. If a supplement disables or reassigns severity for an id that no longer exists (for example, `ai_vocab_cluster.key` was removed and `ai_vocab_cluster.align` became `ai_vocab_cluster.align_with`), the engine warns that the identifier is unknown and the entry has no effect, rather than failing. Check `rules.py` for current ids after an upgrade if a supplement directive stops doing anything.
+
+## Suppression directives
+
+Any file can suppress rules inline with an HTML comment, which stays
+invisible in rendered markdown:
+
+```
+<!-- voice-check: ignore -->                 suppress this line
+<!-- voice-check: ignore puffery -->         suppress one rule on this line
+<!-- voice-check: disable -->                suppress from here on
+<!-- voice-check: enable -->                 resume after a disable
+```
+
+Arguments accept a rule name, which covers every row under that name, or a
+single rule id such as `puffery.crucial`. A comma separated list works too.
+A `disable` with no matching `enable` runs to the end of the file.
+
+Only one `disable` can be open at a time. A second `disable` opened while
+the first is still open is ignored entirely, rule arguments included; the
+scope and rule list that apply until the next `enable` are the first
+`disable`'s. Close the open one before opening another.
+
+Directives inside fenced code blocks have no effect, so the examples above
+are inert.
