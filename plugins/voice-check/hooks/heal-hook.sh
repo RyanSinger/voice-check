@@ -34,10 +34,11 @@ fi
 # FOUND records whether this repo ever opted in to voice-check hooks. A repo
 # with no marked hook at all is not one we install into: the installer is the
 # opt in, and healing must never become a back door for it. That also means a
-# commit-msg hook a user deliberately deleted stays deleted while their
-# pre-commit hook is current. Every install in the field is stamped 2.4.0 or
-# older, so the version bump that ships this makes them stale and one heal
-# writes both hooks anyway.
+# commit-msg hook a user deliberately deleted stays deleted, but only until
+# the next version bump: once the pre-commit stamp falls behind plugin.json,
+# NEEDS_HEAL trips and one heal writes both hooks again. Every install in the
+# field is stamped 2.4.0 or older, so the version bump that ships this makes
+# them stale right away and one heal writes both hooks anyway.
 FOUND=0
 NEEDS_HEAL=0
 

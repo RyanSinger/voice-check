@@ -71,6 +71,26 @@ def test_file_surface_is_the_default_and_unchanged():
     assert "puffery" in {f["rule"] for f in without}
 
 
+def test_doc_scope_family_never_reaches_commit_messages():
+    """ai_vocab_cluster is the one doc scope family and is not on the
+    allowlist. Every other assertion in this module uses line scope rules,
+    so without this test a refactor that moved doc rows out of
+    _select_rows would still pass the suite even though the surface filter
+    had stopped covering the doc scope pass."""
+    text = (
+        "We delve into the tapestry of the codebase and leverage a robust "
+        "framework.\n"
+        "This underscores a pivotal shift, and it is crucial that we delve "
+        "deeper\n"
+        "into the realm of testing.\n"
+    )
+    on_files = {f["rule"] for f in _scan(text, surface="file")}
+    assert "ai_vocab_cluster" in on_files
+
+    on_commits = {f["rule"] for f in _scan(text, surface="commit")}
+    assert "ai_vocab_cluster" not in on_commits
+
+
 def test_supplement_rules_never_reach_commit_messages():
     """A repo's custom word cannot be suppressed in a commit message any more
     than a built in can, so it does not run there."""

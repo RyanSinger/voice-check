@@ -76,8 +76,13 @@ esac
 CUT_FILE="$SCRATCH_ROOT/.voice-check-commit-msg.cut"
 SCAN_FILE="$SCRATCH_ROOT/.voice-check-commit-msg.scan"
 # Every exit path, including the failure paths. A hook that litters on every
-# commit is its own defect.
-trap 'rm -f "$CUT_FILE" "$SCAN_FILE"' EXIT
+# commit is its own defect. The trap itself must never fail: under set -e a
+# failing command in an EXIT trap overrides the status the script was
+# exiting with, so a stray rm failure (a scratch path that became a
+# directory, a permission problem, a read only checkout) would turn a
+# correct exit 0 into a nonzero status and block the commit. The
+# "|| true" guards against exactly that.
+trap 'rm -f "$CUT_FILE" "$SCAN_FILE" 2>/dev/null || true' EXIT
 
 # The message file is not the message. It carries git's instruction comments,
 # and under commit.verbose the entire staged diff below a scissors line.
@@ -88,10 +93,25 @@ trap 'rm -f "$CUT_FILE" "$SCAN_FILE"' EXIT
 # commit message. Cut at the scissors marker FIRST, then strip comments.
 # A message with no scissors line loses nothing to the cut.
 #
+# The comment character is configurable (core.commentChar), and the
+# scissors line is built from it, so the cut has to read the same setting
+# `git stripspace --strip-comments` already honors, rather than hardcode
+# "#". Unset and the literal value "auto" both mean git is using "#".
+CC=$(git config --get core.commentChar 2>/dev/null) || CC=""
+case "$CC" in
+  ""|auto) CC="#" ;;
+esac
+
+# awk rather than sed for the cut: the comment character can be a regex
+# metacharacter (".", "*", and "^" are all legal values), and comparing it
+# as a literal string with substr means it never needs escaping.
+#
 # If either stage fails, fall back to the raw message file. That degrades
 # toward reporting more, which is this project's stated principle, and the
 # worst case is a finding on a comment line rather than a missed one.
-if sed '/^#.*>8/,$d' "$MSG_FILE" > "$CUT_FILE" 2>/dev/null \
+if awk -v cc="$CC" \
+     'substr($0,1,1)==cc && index($0,">8")>0 {exit} {print}' \
+     "$MSG_FILE" > "$CUT_FILE" 2>/dev/null \
    && git stripspace --strip-comments < "$CUT_FILE" > "$SCAN_FILE" 2>/dev/null; then
   :
 else
@@ -103,7 +123,12 @@ if [ ! -s "$SCAN_FILE" ]; then
   exit 0
 fi
 
-out=$("$PYTHON" "$ENGINE" --report-only --surface commit "$SCAN_FILE" 2>&1 || true)
+# --report-only contractually exits 0. A nonzero status means the engine
+# never ran (an older cached engine without --surface, a broken $PYTHON),
+# not that it found something, so the "|| out=" branch discards whatever
+# usage or error text it printed instead of showing it as a finding. This
+# still must not trip set -e: "|| out=" keeps the overall status zero.
+out=$("$PYTHON" "$ENGINE" --report-only --surface commit "$SCAN_FILE" 2>&1) || out=""
 
 if [ -n "$out" ]; then
   echo "voice-check: commit message findings (advisory only, commit will proceed)"

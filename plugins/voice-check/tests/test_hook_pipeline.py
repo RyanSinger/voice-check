@@ -570,6 +570,34 @@ def test_commit_msg_ignores_git_comments_and_the_verbose_diff(fresh_repo):
         f"verbose diff was scanned:\n{combined}")
 
 
+def test_commit_msg_honors_a_custom_comment_char(fresh_repo):
+    """git config core.commentChar can be any single character, and the
+    scissors line under commit.verbose is built from it, not hardcoded "#".
+    git stripspace --strip-comments already reads this setting; the cut
+    ahead of it must match, or a repo using a different comment character
+    never matches the scissors line and the diff beneath it leaks into the
+    scan.
+    """
+    subprocess.run(
+        ["git", "-C", str(fresh_repo), "config", "core.commentChar", ";"],
+        check=True, env=_git_env(),
+    )
+    message = (
+        "Real message here\n"
+        "\n"
+        "; Please enter the commit message for your changes.\n"
+        "; ------------------------ >8 ------------------------\n"
+        "; Do not modify or remove the line above.\n"
+        "diff --git a/x.md b/x.md\n"
+        "+a line with an em dash — here\n"
+    )
+    r = _run_commit_msg_template(fresh_repo, message)
+    assert r.returncode == 0
+    combined = r.stdout + r.stderr
+    assert "no_dashes" not in combined, (
+        f"verbose diff leaked under a custom comment char:\n{combined}")
+
+
 def test_commit_msg_keeps_the_body_when_there_is_no_scissors_line(fresh_repo):
     message = (
         "Subject line\n"
@@ -600,6 +628,18 @@ def test_commit_msg_leaves_no_scratch_files_behind(fresh_repo):
     git_dir_leftovers = sorted(p.name for p in (fresh_repo / ".git").glob("voice-check-*"))
     assert root_leftovers == [], f"scratch files left behind at repo root: {root_leftovers}"
     assert git_dir_leftovers == [], f"scratch files left behind in .git: {git_dir_leftovers}"
+
+
+def test_commit_msg_exit_stays_zero_when_the_trap_cannot_remove_a_scratch_file(fresh_repo):
+    """Pins the critical defect. Under set -e, a failing command in an EXIT
+    trap overrides the status the script was exiting with, so a stray rm
+    failure would turn a correct exit 0 into a nonzero status and block the
+    commit. A directory at the cut file's path is the cheapest way to make
+    plain rm -f fail, since it refuses a directory without -r.
+    """
+    (fresh_repo / ".voice-check-commit-msg.cut").mkdir()
+    r = _run_commit_msg_template(fresh_repo, "Fix the parser — nested quotes\n")
+    assert r.returncode == 0
 
 
 def test_commit_msg_uses_the_linked_worktree_own_config_not_the_main_repo(
@@ -671,6 +711,34 @@ def test_commit_msg_exits_zero_when_the_engine_is_missing(fresh_repo):
         cwd=str(fresh_repo), capture_output=True, text=True, env=env,
     )
     assert r.returncode == 0
+
+
+def test_commit_msg_discards_output_when_the_engine_exits_nonzero(fresh_repo):
+    """An older cached engine without --surface, or a broken $PYTHON, makes
+    the engine invocation itself fail rather than run --report-only, which
+    contractually exits 0. A nonzero status means there is nothing to
+    report, not a finding, so whatever usage or error text the failed
+    invocation printed must never reach the findings banner.
+    """
+    stub = fresh_repo / "stub_engine.py"
+    stub.write_text(
+        "import sys\n"
+        "sys.stderr.write('usage: voice_check.py [-h] ...\\n')\n"
+        "sys.exit(2)\n"
+    )
+    msg_file = fresh_repo / ".git" / "COMMIT_EDITMSG"
+    msg_file.parent.mkdir(parents=True, exist_ok=True)
+    msg_file.write_text("Fix the parser — nested quotes\n")
+
+    env = _git_env()
+    env["VOICE_CHECK_PYTHON"] = sys.executable
+    env["VOICE_CHECK_ENGINE"] = str(stub)
+    r = subprocess.run(
+        ["bash", str(COMMIT_MSG_TEMPLATE), str(msg_file)],
+        cwd=str(fresh_repo), capture_output=True, text=True, env=env,
+    )
+    assert r.returncode == 0
+    assert (r.stdout + r.stderr).strip() == ""
 
 
 def test_commit_msg_exits_zero_when_given_no_argument(fresh_repo):
