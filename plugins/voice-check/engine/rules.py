@@ -348,10 +348,18 @@ RULES: List[dict] = _finalize([
         "id": "markup_artifacts.citation_tokens",
         "category": "markup_artifacts",
         "kind": "regex",
+        # Every alternative is a literal token no human types on purpose, so
+        # this row carries no false positive risk and stays high severity.
+        # Grouped in one row rather than split per vendor: nobody has needed
+        # to disable a single vendor's tokens, and the id would multiply.
         "pattern": (
-            r"contentReference|oaicite|turn\d+search\d+|\[cite[:_]"
-            r"|\[span_\d+\]|grok_card|grok_render|ppl-ai-file-upload"
-            r"|attached_file"
+            r"contentReference|oaicite|oai_citation"
+            r"|turn\d+(?:search|image|news|file)\d+"
+            r"|\[cite[:_]|\[span_\d+\]|\[web:\d+\]"
+            r"|grok[-_]card|grok_render"
+            r"|ppl-ai-file-upload|attached_file"
+            r"|【\d+†"
+            r"|:::writing\{variant="
         ),
         "message": "Leaked AI citation artifact. Delete the token; restore a real citation if one belongs here.",
         "scope": "line",

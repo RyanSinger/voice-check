@@ -18,7 +18,7 @@ Cut "I can take on," "I could potentially help with," "I'm pushing for this dire
 ### No copula avoidance `[engine + skill]`
 Don't replace "is" with "serves as," "stands as," "acts as," "functions as," "represents," "marks." Just say "is." The engine catches the "as" variants ("serves as", "stands as", "acts as", "functions as") with a word-boundary regex. Nuanced replacements like "represents" are left to the skill.
 
-<!-- voice-check: disable ai_vocab_cluster, puffery, promotional_tone, vocab_2026, bridge_phrases, hedging, vague_attribution, dangling_participle, structure -->
+<!-- voice-check: disable ai_vocab_cluster, puffery, promotional_tone, vocab_2026, bridge_phrases, hedging, vague_attribution, dangling_participle, structure, markup_artifacts -->
 
 ## AI Vocabulary Cluster (flag when 2+ appear in the same document) `[engine + skill]`
 
@@ -113,9 +113,13 @@ Phrase forms `[engine + skill]`: "quietly [verb]ing," "this matters because," "t
 
 ## Markup Artifacts `[engine + skill]`
 
-Leaked model citation tokens are proof of unedited AI output. Flag and delete: `contentReference`, `oaicite`, `turn0search` style tokens, `[cite:` fragments, `[span_0]` fragments, `grok_card`, `grok_render`, `ppl-ai-file-upload`, `attached_file`.
+Leaked model citation tokens are proof of unedited AI output. Flag and delete: `contentReference`, `oaicite`, `oai_citation`, `turn0search` and `turn0image` and `turn0news` and `turn0file` style tokens, `[cite:` fragments, `[span_0]` fragments, `[web:1]` fragments, `grok_card` and its hyphenated `grok-card` form, `grok_render`, `ppl-ai-file-upload`, `attached_file`, DeepSeek lenticular bracket citations, and the `:::writing` document marker.
 
 Emoji used as bullet markers (an emoji starting a line as if it were a list marker) is also flagged. Use standard list markers. Artifacts quoted inside fenced code blocks are not flagged.
+
+Two token families cannot be rule rows, because they live where the masking layer correctly refuses to look. A chatbot tracking parameter sits inside a URL, and URLs are masked whole; a JSON attribution key sits inside double quotes, and short quoted spans are masked as mentions. Both are handled by an analyzer instead, which reads raw lines: `utm_source=chatgpt.com`, `utm_source=openai`, `utm_source=copilot.com`, `referrer=grok.com`, and `attributableIndex`.
+
+Because that analyzer bypasses masking by design, naming those tokens anywhere makes the document containing them fire, backticks included. That is why this section sits inside a suppression range rather than relying on inline code the way the rule row tokens above do.
 
 <!-- voice-check: enable -->
 

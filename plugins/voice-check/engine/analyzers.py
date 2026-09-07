@@ -60,6 +60,45 @@ def mechanical_bold_headers(doc, cfg):
     }]
 
 
+EMBEDDED_TOKEN_RE = re.compile(
+    r"utm_source=(?:chatgpt\.com|openai|copilot\.com)"
+    r"|referrer=grok\.com"
+    r"|attributableIndex",
+    re.IGNORECASE,
+)
+
+
+def embedded_artifacts(doc, cfg):
+    """Flag leaked AI tokens that live inside URLs or JSON.
+
+    These cannot be rule rows. A tracking parameter sits inside a URL, and
+    `mask_line` blanks URLs entirely; a JSON attribution key sits inside
+    double quotes, and the short quote masker blanks those. Both are correct
+    masking decisions, since neither a URL nor a quoted key is prose, but
+    they mean a line scope rule can never see the token.
+
+    Reads doc.lines, the RAW lines, for exactly that reason. Do not switch
+    this to doc.scan_lines: the masking that makes the rest of the engine
+    accurate is what hides these.
+
+    One entry per matching line, so each finding points at its own line.
+    """
+    out = []
+    for num, line in enumerate(doc.lines, start=1):
+        m = EMBEDDED_TOKEN_RE.search(line)
+        if not m:
+            continue
+        out.append({
+            "message": (
+                f"Leaked AI artifact embedded in a URL or JSON: "
+                f"'{m.group(0)}'. Delete the token, and restore a real link "
+                f"or citation if one belongs here."
+            ),
+            "lines": [num],
+        })
+    return out
+
+
 ANALYZERS = [
     {
         "name": "structure",
@@ -67,5 +106,14 @@ ANALYZERS = [
         "category": "structure",
         "severity": "low",
         "fn": mechanical_bold_headers,
+    },
+    {
+        # Shares the markup_artifacts name so disabling that family kills
+        # both the citation token row and this analyzer, which is the intent.
+        "name": "markup_artifacts",
+        "id": "markup_artifacts.embedded_tokens",
+        "category": "markup_artifacts",
+        "severity": "high",
+        "fn": embedded_artifacts,
     },
 ]

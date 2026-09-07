@@ -1,6 +1,8 @@
 # Wikipedia: Signs of AI Writing (condensed)
 
-Snapshot as of 2026-08-11 of https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing, condensed for skill use.
+Snapshot as of 2026-09-07 of https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing, condensed for skill use.
+
+Refreshed from the live page on 2026-09-07. The previous snapshot already carried most of the leaked token families, so this pass adds the ones that appeared since (a document marker, a Perplexity web citation, additional turn variants), corrects the Grok tag to its hyphenated form, records a new content-level sign, and notes that the em dash sign is being downgraded on the source page.
 
 ## Contents
 
@@ -66,6 +68,12 @@ When an LLM generates an article about something that is not a proper name, such
 ### Vague see also sections and generic linking
 
 LLMs fill "See also" sections with broad, generic terms loosely related to the topic (a startup article linking to "Financial technology") and occasionally link to articles that do not exist.
+
+### Vague expression of connection or association
+
+Rather than stating a relationship directly ("In 2017, John Doe was the CEO of ExampleCorp"), LLM output alludes to two subjects being connected or associated with each other ("sources identified John Doe as being associated with leadership of ExampleCorp"). Watch for "in connection with", "connected to", "in association with", and "associated with", especially when they replace a plain factual claim. The indirection alone proves nothing; its abundance alongside other signs is what matters. Frequently pairs with promotional vocabulary, as in "widely associated with".
+
+A related header level tell: an "Awards and recognition" section, or a bare "Recognition" section, is near ubiquitous in AI generated articles. Section titles of the "X and Y" shape are common in the same output.
 
 ---
 
@@ -193,12 +201,14 @@ The cited book may be real and topically relevant, but without a page number the
 
 Incorrect syntax for reusing a named reference, footnote style characters left in running text, and PMIDs attached to sources that do not match the numbers cited.
 
+<!-- voice-check: disable markup_artifacts -->
 ### Tracking parameters revealing chatbot involvement
 
 utm_source=openai and utm_source=chatgpt.com from ChatGPT, utm_source=copilot.com from Microsoft Copilot, referrer=grok.com from Grok. These confirm a chatbot was used to find the source, not necessarily that the prose was AI written.
 
 ---
 
+<!-- voice-check: enable -->
 ## Stylistic quirks
 
 ### Collaborative phrasing meant for the user, not the article
@@ -227,17 +237,20 @@ Drafts that arrive already containing a review template marked declined, or prot
 
 ---
 
+<!-- voice-check: disable markup_artifacts -->
 ## Model-specific signatures
 
 Leaked interface artifacts are the strongest tell in this whole guide: they prove a specific tool touched the text, though not necessarily that every sentence around them is AI generated.
 
-ChatGPT: leftover reference markup such as contentReference, oaicite, and oai_citation tags; incrementing placeholder citations like turn0search0; an attributableIndex field occasionally leaking into text; tracking parameters utm_source=openai and utm_source=chatgpt.com. Stylistically, GPT-4 output reads as more blatantly, obviously positive; GPT-4o is more subtly positive and avoids the most superlative phrasing while keeping similar vocabulary.
+ChatGPT: leftover reference markup such as contentReference, oaicite, and oai_citation tags; incrementing placeholder citations like turn0search0, with image, news, and file variants in the same numbered shape; an attributableIndex field occasionally leaking into text; tracking parameters utm_source=openai and utm_source=chatgpt.com. Stylistically, GPT-4 output reads as more blatantly, obviously positive; GPT-4o is more subtly positive and avoids the most superlative phrasing while keeping similar vocabulary.
 
 Gemini: bracketed citation fragments such as a cite marker followed by a number, and span tags like a span_ prefixed identifier paired with a start_span marker, both leftovers from Gemini's internal citation format.
 
-Grok: XML style grok_card tags and the longer grok_render_citation_card_json artifact; the tracking parameter referrer=grok.com; heavy, sustained overuse of causal, empirical, correlate, and underscore, more pronounced than in other current models; the "X rather than Y" contrast construction appears disproportionately in Grok output, including in Grokipedia generated text.
+Grok: XML style card tags, written on the live page with a hyphen as grok-card rather than the underscored form recorded in earlier snapshots, and the longer grok_render_citation_card_json artifact; the tracking parameter referrer=grok.com; heavy, sustained overuse of causal, empirical, correlate, and underscore, more pronounced than in other current models; the "X rather than Y" contrast construction appears disproportionately in Grok output, including in Grokipedia generated text.
 
-Perplexity: leftover upload artifacts such as ppl-ai-file-upload and attached_file references that belong to its file handling interface, not to article content.
+Perplexity: leftover upload artifacts such as ppl-ai-file-upload and attached_file references that belong to its file handling interface, plus bracketed source markers of the web and attached_file kind appended to sentences.
+
+Unclassified: a document marker of the form three colons followed by writing and a braced variant and id, first observed June 2026 and not yet attributed to a specific tool. It sometimes appears in other languages, and a matching triple colon often closes the block.
 
 DeepSeek: curly quotation marks and curly apostrophes similar to ChatGPT's, plus occasional lenticular brackets and dagger symbols leaking from its citation formatting.
 
@@ -247,6 +260,7 @@ Claude and Gemini are both noted as generally not producing the curly quote patt
 
 ---
 
+<!-- voice-check: enable -->
 ## False positives to avoid
 
 ### Detection tools are not reliable on their own
@@ -272,6 +286,8 @@ Letter-like writing on its own: formal letter conventions predate LLMs by centur
 Conjunctions on their own: essay style human writing overuses connectives too.
 
 Bizarre or broken wikitext in isolation: more often explained by a browser extension or editing tool bug than by AI generation.
+
+Em dashes, increasingly: the source page now carries a maintenance note proposing that this sign move to its historical indicators section, on the grounds that it is much less common in current model output. A July 2026 study it cites found that among contemporary models only Claude used em dashes more than professional writers, while ChatGPT used them less, and some vendors have deliberately suppressed them. The sign remains useful in combination with others and on older text, and it is far more common on discussion pages than in article prose. Note this is an observation about detecting AI, not about house style: a project can ban em dashes for its own reasons independent of what they signal.
 
 ### Signs that do support human authorship
 
