@@ -28,6 +28,10 @@ One might be fine. Two or more in the same document is a pattern. Replace with p
 
 `key (as adjective)` is skill only. Telling the adjective "a key decision" apart from the plain noun "an API key" needs part of speech judgment that a regex cannot make, so the engine omits `key` from its cluster list entirely and leaves it to the skill.
 
+Five other members carry qualifiers the engine also cannot enforce: `highlight (as verb)`, `showcase (as verb)`, `underscore (as verb)`, `landscape (abstract noun)`, and `tapestry (abstract noun)`. Unlike `key`, the engine still matches these as bare words, because dropping them would lose more than it saves. The qualifiers describe the sense to flag, and the skill applies them; the engine approximates.
+
+That approximation is deliberate and measured. Scanning 206 markdown files, 19 fired the cluster and only 4 fired solely because of these five words, so tightening them would change roughly two percent of verdicts while adding five hand written patterns whose qualifiers a regex cannot express anyway. "Highlight your advantages" is a verb and not the tell; "competitive landscape" is the abstract noun and arguably is. Two safeguards make the looseness tolerable: a single occurrence never fires, since the cluster needs two, and the whole rule is low severity, so it collapses to a counted line unless the reader asks for detail.
+
 ## Puffery and Significance Language `[engine + skill]`
 
 Flag and rewrite: "pivotal," "crucial," "testament," "underscores," "highlights its importance," "represents a shift," "setting the stage for," "indelible mark," "deeply rooted," "groundbreaking," "renowned."
