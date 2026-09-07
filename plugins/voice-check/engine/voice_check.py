@@ -2,31 +2,21 @@
 from pathlib import Path
 from typing import List
 
+import config
 import rules
-import supplement
 
 
 def scan(file_path: Path) -> List[dict]:
-    """Scan a file for writing rule violations. Return a list of findings.
-
-    Each finding is a dict with: rule, line, col, snippet, message.
-    Empty list means clean.
-
-    If a per-repo supplement file is found via supplement.find_for(), its
-    extra rule rows are merged into the scan table for this invocation.
-    """
+    """Scan a file for writing rule violations. Return a list of findings."""
     file_path = Path(file_path)
-    text = file_path.read_text()
+    text = file_path.read_text(encoding="utf-8", errors="replace")
 
-    extra_rows: List[dict] = []
-    sup_path = supplement.find_for(file_path)
-    if sup_path is not None:
-        try:
-            extra_rows = supplement.load_rows(sup_path)
-        except Exception:
-            extra_rows = []
+    cfg = config.Config.empty()
+    cfg_path = config.find_for(file_path)
+    if cfg_path is not None:
+        cfg = config.load(cfg_path)
 
-    return rules.scan_text(text, extra_rows=extra_rows)
+    return rules.scan_text(text, extra_rows=cfg.extra_rows)
 
 
 def format_findings(findings: List[dict]) -> str:

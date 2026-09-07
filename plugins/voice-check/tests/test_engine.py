@@ -90,32 +90,6 @@ def test_promotional_phrase_flagged(tmp_path):
     assert len(promo) >= 1
 
 
-def test_find_supplement_walks_up_to_git_root(tmp_path):
-    # Create a fake git repo with a nested structure
-    (tmp_path / ".git").mkdir()
-    (tmp_path / ".claude").mkdir()
-    (tmp_path / ".claude" / "voice-check.md").write_text("# supplement\n")
-    nested = tmp_path / "deep" / "nested" / "dir"
-    nested.mkdir(parents=True)
-    target = nested / "doc.md"
-    target.write_text("hello\n")
-
-    sys.path.insert(0, str(Path(__file__).parent.parent / 'engine'))
-    import supplement
-    result = supplement.find_for(target)
-    assert result == tmp_path / ".claude" / "voice-check.md"
-
-
-def test_find_supplement_returns_none_when_absent(tmp_path):
-    (tmp_path / ".git").mkdir()
-    target = tmp_path / "doc.md"
-    target.write_text("hello\n")
-
-    import supplement
-    result = supplement.find_for(target)
-    assert result is None
-
-
 import subprocess
 import sys
 
@@ -144,21 +118,6 @@ def test_cli_dirty_file_reports_findings():
     assert result.returncode == 0
     assert "no_dashes" in result.stdout or "ai_vocab" in result.stdout or "puffery" in result.stdout
     assert len(result.stdout) > 0
-
-
-def test_find_supplement_stops_at_git_root(tmp_path):
-    # Supplement above the git root should NOT be found
-    (tmp_path / ".claude").mkdir()
-    (tmp_path / ".claude" / "voice-check.md").write_text("# outer\n")
-    inner_repo = tmp_path / "subrepo"
-    inner_repo.mkdir()
-    (inner_repo / ".git").mkdir()
-    target = inner_repo / "doc.md"
-    target.write_text("hello\n")
-
-    import supplement
-    result = supplement.find_for(target)
-    assert result is None
 
 
 # ---------------------------------------------------------------------------
@@ -324,26 +283,6 @@ def test_clean_fixture_structural_cases_pass(tmp_path):
     fixture = Path(__file__).parent / "fixtures" / "clean.md"
     findings = voice_check.scan(fixture)
     assert findings == [], f"clean fixture produced findings: {findings}"
-
-
-def test_supplement_load_rows_parses_all_kinds(tmp_path):
-    p = tmp_path / "voice-check.md"
-    p.write_text(
-        "```voice-check-words\n"
-        "foo\n"
-        "```\n"
-        "```voice-check-phrases\n"
-        "bar baz\n"
-        "```\n"
-        "```voice-check-regex\n"
-        "\\bqux\\d+\\b\n"
-        "```\n"
-    )
-    import supplement
-    rows = supplement.load_rows(p)
-    kinds = sorted({r["kind"] for r in rows})
-    assert kinds == ["phrase", "regex", "word"]
-    assert all(r["name"].startswith("supplement:") for r in rows)
 
 
 # ---------------------------------------------------------------------------
