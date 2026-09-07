@@ -42,6 +42,8 @@ Before/after examples for each rule category. Use these to calibrate when fixing
 - BEFORE: "We need speed, accuracy, and reliability."
 - AFTER: "We need speed and accuracy. Reliability comes from those two."
 
+<!-- voice-check: disable structure -->
+
 ### Negative parallelism
 - BEFORE: "It's not just a tool, it's a workflow."
 - AFTER: "It's a workflow."
@@ -87,3 +89,5 @@ Before/after examples for each rule category. Use these to calibrate when fixing
 
 - BEFORE: "While microservices offer flexibility, they also introduce complexity."
 - AFTER: "Microservices cost us two weeks of debugging distributed traces. We went back to the monolith."
+
+<!-- voice-check: enable -->

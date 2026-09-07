@@ -18,7 +18,7 @@ Cut "I can take on," "I could potentially help with," "I'm pushing for this dire
 ### No copula avoidance `[engine + skill]`
 Don't replace "is" with "serves as," "stands as," "acts as," "functions as," "represents," "marks." Just say "is." The engine catches the "as" variants ("serves as", "stands as", "acts as", "functions as") with a word-boundary regex. Nuanced replacements like "represents" are left to the skill.
 
-<!-- voice-check: disable ai_vocab_cluster, puffery, promotional_tone, vocab_2026, bridge_phrases, hedging, vague_attribution, dangling_participle -->
+<!-- voice-check: disable ai_vocab_cluster, puffery, promotional_tone, vocab_2026, bridge_phrases, hedging, vague_attribution, dangling_participle, structure -->
 
 ## AI Vocabulary Cluster (flag when 2+ appear in the same document) `[engine + skill]`
 

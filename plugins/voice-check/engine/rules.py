@@ -32,6 +32,7 @@ _SEVERITY_BY_NAME = {
     "no_dashes": "high",
     "markup_artifacts": "high",
     "ai_vocab_cluster": "low",
+    "structure": "low",
 }
 
 
@@ -364,6 +365,72 @@ RULES: List[dict] = _finalize([
         "message": "Emoji used as a bullet marker. Use standard list markers.",
         "scope": "line",
     },
+
+    # -- structural frames --------------------------------------------------
+    # These match sentence SHAPES rather than words, so they fire on
+    # legitimate prose more readily than a vocabulary rule does. They are low
+    # severity, so Phase 1's collapse behavior summarizes them to a single
+    # counted line unless the reader asks for detail.
+    #
+    # Every row carries "term" because a raw pattern must never reach a
+    # developer's terminal, the same reason ai_vocab_cluster.additionally
+    # carries one.
+    *[
+        {
+            "name": "structure",
+            "id": f"structure.{sid}",
+            "category": "structure",
+            "kind": "regex",
+            "pattern": pattern,
+            "term": term,
+            "message": message,
+            "scope": "line",
+        }
+        for sid, pattern, term, message in [
+            (
+                "not_just_but",
+                r"\bnot (?:just|only|merely|simply)\b[^.!?\n]{1,80}?(?:,\s*)?\b(?:but|it['’]?s|it is)\b",
+                "not just X, but Y",
+                "Negative parallelism. The false opposition manufactures insight. Make the direct claim.",
+            ),
+            (
+                "not_about_but_about",
+                r"\b(?:it|this|that)['’]?s not about\b[^.!?\n]{1,80}?\b(?:it|this|that)['’]?s about\b",
+                "it's not about X, it's about Y",
+                "Contrast reframe. State the point directly instead of resolving a false opposition.",
+            ),
+            (
+                "while_also",
+                r"\bwhile\b[^.!?\n]{1,80}?,\s*(?:it|they|there)\s+also\b",
+                "while X, it also Y",
+                "Balanced-debate framing. Take a position or report the facts.",
+            ),
+            (
+                "advantages_disadvantages",
+                r"\b(?:advantages?|benefits?|strengths?)\b[^.!?\n]{0,60}?\b(?:disadvantages?|drawbacks?|weaknesses?|downsides?)\b",
+                "advantages paired with disadvantages",
+                "Balanced-debate framing. Take a position or report the facts.",
+            ),
+            (
+                "despite_faces_challenges",
+                r"\bdespite\s+(?:its|their|these|the)\b[^.!?\n]{1,80}?\bfaces?\b[^.!?\n]{0,40}?\bchallenges?\b",
+                "despite X, Y faces challenges",
+                "Challenges-and-prospects frame. Cut it or say something concrete.",
+            ),
+            (
+                "false_range",
+                # Lowercase plural to lowercase plural. "From X to Y" is
+                # ordinary English, so the plural shape is what separates a
+                # false enumeration of scope from a real range. Gerund pairs
+                # such as "from onboarding to offboarding" are deliberately
+                # missed: broadening to catch them would also fire on "from
+                # testing to shipping", which is a genuine sequence.
+                r"\bfrom\s+[a-z]+s\b[^.!?\n]{0,30}?\bto\s+[a-z]+s\b",
+                "from Xs to Ys",
+                "False range. Cut it unless a real spectrum exists.",
+            ),
+        ]
+    ],
 ])
 
 

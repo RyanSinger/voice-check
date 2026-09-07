@@ -49,6 +49,8 @@ Words to watch: industry reports, observers have cited, experts argue, some crit
 
 LLMs attribute opinions to unnamed authorities, a weasel wording pattern, and inflate how widely held a view is by citing one or two sources as if they represent consensus.
 
+<!-- voice-check: disable structure -->
+
 ### Outline like conclusions about challenges and future prospects
 
 Words to watch: despite its ... faces several challenges, despite these challenges, "Challenges and Legacy" as a heading, "Future Outlook" as a heading.
@@ -88,6 +90,8 @@ Not X, but Y: a more absolute version, such as "not grounded in visual mastery, 
 X rather than Y: associated particularly with Grok output, for example a sentence describing a historical actor as "prioritizing empirical consolidation of power amid fragmented loyalties rather than ideological purity."
 
 All three patterns explicitly negate a simpler framing before asserting a more complex one, a rhetorical move that reads as insight but usually adds nothing sourced.
+
+<!-- voice-check: enable -->
 
 ### Rule of three
 
