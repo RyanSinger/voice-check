@@ -2,6 +2,7 @@
 
 Two Claude Code skills that catch AI writing tells, em dashes, hedging, puffery, and promotional tone:
 
+<!-- voice-check: disable structure.bold_headers -->
 - **`voice-check`**: reactive scan that fixes violations after you write
 - **`writing-guard`**: proactive guard that loads before drafting and self-censors as you write
 
@@ -23,6 +24,7 @@ Every engine row carries a stable id of the form `<name>.<slug>`, for example `p
 - **2026 vocabulary [engine for phrases, skill for bare words]:** "quietly building," "this matters because," "built different," "decisions compound"; bare words (quietly, shift, matters, signal, compound) are judged in context by the skill
 - **Markup artifacts [engine]:** leaked citation tokens (contentReference, oaicite, [cite:, grok_card, ppl-ai-file-upload), emoji used as bullet markers <!-- voice-check: ignore markup_artifacts -->
 - **Structural tells [skill]:** rule of three, negative parallelism, false ranges, challenges-and-future-prospects, elegant variation
+<!-- voice-check: enable -->
 
 The full rule list is in `plugins/voice-check/references/rules.md`.
 

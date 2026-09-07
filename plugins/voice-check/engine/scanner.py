@@ -2,10 +2,12 @@
 
 The only module that knows about both rules and documents. Applies, in order:
 row selection from config, line scope matching, document scope aggregation,
-suppression, severity tagging, and line range filtering.
+suppression, severity tagging, line range filtering, and the analyzer pass.
 """
+import sys
 from typing import Dict, List
 
+import analyzers
 import rules
 
 
@@ -109,5 +111,44 @@ def scan(doc, cfg, rel_path: str = "", line_ranges=None) -> List[dict]:
             "snippet": "",
             "message": message,
         })
+
+    # Analyzer pass. Analyzers compute over the document instead of matching
+    # it, and return {"message", "lines"} entries. Everything that makes an
+    # entry into a finding happens here, so an analyzer needs no knowledge of
+    # suppression, severity, or line ranges.
+    for entry in analyzers.ANALYZERS:
+        if cfg.is_disabled(entry, rel_path):
+            continue
+        try:
+            produced = entry["fn"](doc, cfg)
+        except Exception as exc:  # noqa: BLE001
+            # One failing analyzer must not cost us the rule passes or the
+            # other analyzers. This is the one place the project's "degrade
+            # toward reporting more" principle cannot hold.
+            print(
+                f"voice-check: analyzer {entry['id']} failed ({exc}), skipping",
+                file=sys.stderr,
+            )
+            continue
+
+        for item in produced:
+            evidence = [
+                ln for ln in item["lines"]
+                if not _suppressed(doc, ln, entry)
+            ]
+            if not evidence:
+                continue
+            if not any(in_ranges(ln, line_ranges) for ln in evidence):
+                continue
+            first = evidence[0]
+            findings.append({
+                "rule": entry["name"],
+                "rule_id": entry["id"],
+                "severity": cfg.severity_for(entry),
+                "line": first,
+                "col": 0,
+                "snippet": doc.lines[first - 1].rstrip("\n"),
+                "message": item["message"],
+            })
 
     return findings
