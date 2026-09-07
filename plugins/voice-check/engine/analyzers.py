@@ -101,10 +101,17 @@ def embedded_artifacts(doc, cfg):
 
 ANALYZERS = [
     {
+        # Ships off. Measured across 206 markdown files, this rule fired on
+        # 6.8 percent of them with no identifiable true positive: every hit
+        # was a definition list. The Wikipedia examples this rule was built
+        # from are definition lists too, so no syntactic test separates the
+        # tell from the legitimate pattern. Enable it per repo with a
+        # voice-check-enable block naming structure.bold_headers.
         "name": "structure",
         "id": "structure.bold_headers",
         "category": "structure",
         "severity": "low",
+        "default_off": True,
         "fn": mechanical_bold_headers,
     },
     {

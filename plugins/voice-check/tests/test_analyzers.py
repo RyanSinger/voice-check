@@ -112,12 +112,20 @@ def _scan(text, cfg=None, rel_path="a.md", line_ranges=None):
     return scanner.scan(doc, cfg or config.Config.empty(), rel_path, line_ranges)
 
 
+def _bold_cfg():
+    """structure.bold_headers ships off by default, so a scanner level test
+    of it must ask for it the way a repo would."""
+    c = config.Config.empty()
+    c.enabled.append(("structure.bold_headers", None))
+    return c
+
+
 def _bold_findings(findings):
     return [f for f in findings if f["rule_id"] == "structure.bold_headers"]
 
 
 def test_analyzer_finding_reaches_the_scanner():
-    f = _bold_findings(_scan(_bullets(5, 5)))
+    f = _bold_findings(_scan(_bullets(5, 5), _bold_cfg()))
     assert len(f) == 1
     assert f[0]["rule"] == "structure"
     assert f[0]["severity"] == "low"
@@ -125,7 +133,7 @@ def test_analyzer_finding_reaches_the_scanner():
 
 def test_analyzer_finding_points_at_a_real_line():
     """line must be a surviving evidence line, never 0."""
-    f = _bold_findings(_scan(_bullets(5, 5)))
+    f = _bold_findings(_scan(_bullets(5, 5), _bold_cfg()))
     assert f[0]["line"] == 3
 
 
@@ -142,7 +150,7 @@ def test_config_disable_by_id_removes_only_the_analyzer():
 
 
 def test_config_severity_override_reaches_the_analyzer():
-    cfg = config.Config.empty()
+    cfg = _bold_cfg()
     cfg.severity["structure.bold_headers"] = "high"
     f = _bold_findings(_scan(_bullets(5, 5), cfg))
     assert f[0]["severity"] == "high"
@@ -154,11 +162,11 @@ def test_suppression_over_every_evidence_line_drops_the_finding():
 
 
 def test_analyzer_survives_line_ranges_when_evidence_is_inside():
-    assert _bold_findings(_scan(_bullets(5, 5), line_ranges=[(4, 4)]))
+    assert _bold_findings(_scan(_bullets(5, 5), _bold_cfg(), line_ranges=[(4, 4)]))
 
 
 def test_analyzer_dropped_when_no_evidence_is_in_range():
-    assert _bold_findings(_scan(_bullets(5, 5), line_ranges=[(1, 1)])) == []
+    assert _bold_findings(_scan(_bullets(5, 5), _bold_cfg(), line_ranges=[(1, 1)])) == []
 
 
 def test_excluded_path_skips_analyzers_too():
@@ -196,15 +204,15 @@ def test_suppressed_evidence_is_excluded_before_the_range_check():
     text = "\n".join(lines) + "\n"
 
     # The reported line must be the SECOND bolded bullet, not the first.
-    f = _bold_findings(_scan(text))
+    f = _bold_findings(_scan(text, _bold_cfg()))
     assert len(f) == 1
     assert f[0]["line"] == 4
 
     # A range covering ONLY the suppressed line must drop the finding.
-    assert _bold_findings(_scan(text, line_ranges=[(3, 3)])) == []
+    assert _bold_findings(_scan(text, _bold_cfg(), line_ranges=[(3, 3)])) == []
 
     # A range covering a surviving line keeps it.
-    assert _bold_findings(_scan(text, line_ranges=[(5, 5)]))
+    assert _bold_findings(_scan(text, _bold_cfg(), line_ranges=[(5, 5)]))
 
 
 def _register_bad_analyzer(monkeypatch, fn):
@@ -376,3 +384,25 @@ def test_suppression_directive_drops_it():
         " <!-- voice-check: ignore markup_artifacts.embedded_tokens -->\n"
     )
     assert _embedded_findings(_scan(text)) == []
+
+
+def test_bold_headers_is_off_until_a_repo_asks_for_it():
+    """Measured at 6.8 percent fire rate with no identifiable true positive
+    across 206 files, so it ships off. This pins that it stays off, and that
+    a voice-check-enable entry genuinely turns it on."""
+    doc_text = _bullets(5, 5)
+    assert _bold_findings(_scan(doc_text, config.Config.empty())) == []
+    assert _bold_findings(_scan(doc_text, _bold_cfg()))
+
+
+def test_enabling_by_family_name_also_turns_it_on():
+    cfg = config.Config.empty()
+    cfg.enabled.append(("structure", None))
+    assert _bold_findings(_scan(_bullets(5, 5), cfg))
+
+
+def test_the_other_analyzer_is_unaffected_and_stays_on():
+    """Only bold headers ships off. embedded_tokens must still fire with an
+    empty config, or the default_off flag leaked across the registry."""
+    f = _embedded_findings(_scan("Source: https://x.com/a?utm_source=chatgpt.com\n"))
+    assert len(f) == 1

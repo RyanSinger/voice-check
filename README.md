@@ -2,7 +2,6 @@
 
 Two Claude Code skills that catch AI writing tells, em dashes, hedging, puffery, and promotional tone:
 
-<!-- voice-check: disable structure.bold_headers -->
 - **`voice-check`**: reactive scan that fixes violations after you write
 - **`writing-guard`**: proactive guard that loads before drafting and self-censors as you write
 
@@ -23,9 +22,9 @@ Every engine row carries a stable id of the form `<name>.<slug>`, for example `p
 - **Faux-conversational bridges [engine]:** "here's the thing," "at the end of the day," "let's dive in," "we will explore"
 - **2026 vocabulary [engine for phrases, skill for bare words]:** "quietly building," "this matters because," "built different," "decisions compound"; bare words (quietly, shift, matters, signal, compound) are judged in context by the skill
 - **Markup artifacts [engine]:** leaked citation tokens (contentReference, oaicite, [cite:, grok_card, ppl-ai-file-upload), emoji used as bullet markers <!-- voice-check: ignore markup_artifacts -->
-- **Structural tells [engine]:** negative parallelism ("not just X, but Y"), contrast reframes, balanced-debate framing, challenges-and-prospects, false ranges, and mechanical bold headers on bullet lists. All low severity, so they collapse to a counted line unless you pass `--min-severity low`.
+- **Structural tells [engine]:** negative parallelism ("not just X, but Y"), contrast reframes, balanced-debate framing, challenges-and-prospects, and false ranges. All low severity, so they collapse to a counted line unless you pass `--min-severity low`.
+- **Mechanical bold headers [engine, opt in]:** ships off, because on 206 measured files it fired on 6.8 percent of them and every hit was an ordinary definition list. Enable it per repo with a `voice-check-enable` block naming `structure.bold_headers`.
 - **Structural tells [skill]:** rule of three, elegant variation, uniform sentence rhythm
-<!-- voice-check: enable -->
 
 The full rule list is in `plugins/voice-check/references/rules.md`.
 

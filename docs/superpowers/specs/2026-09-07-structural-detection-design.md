@@ -211,15 +211,24 @@ The gap between 80% and 20% is wide, so the threshold is not finely balanced.
 
 A ratio is why this cannot be a rule row. `doc_min` is an absolute count, so a document with 100 bullets and 5 bolded would satisfy `doc_min: 4` while being 5% bolded. Expressing "most bullets" requires computing over the document, which is the entire reason `analyzers.py` exists.
 
-### The glossary exception
+### The glossary exception, and why the rule now ships off
 
-The threshold flags this project's own `README.md` and `references/rules.md`. Both are definition lists whose bullets read like `- **Hard rules [engine]:** em dashes, en dashes, ...`, where a bolded term per entry is conventional.
+**Superseded 2026-09-07.** This section originally resolved the tension by suppressing the rule in this project's own `README.md` and `references/rules.md`, both definition lists whose bullets read like `- **Hard rules [engine]:** em dashes, ...`, and recorded a wider measurement of 6.2 percent of 1715 external files, roughly half of them definition list shaped.
 
-The rule as `references/rules.md` states it ("Use sparingly, not mechanically") does describe both files. Rather than weaken the rule with a heuristic for what counts as a glossary, both files receive a targeted suppression naming `structure.bold_headers` specifically, with a comment saying they are definition lists. Other repositories still get the detection.
+A follow up measurement settled it the other way. Across 206 markdown files, this repository plus every cached plugin's documentation, the analyzer fired on 14 of them, 6.8 percent, closely matching the earlier figure. Applying the narrowing this section proposed, exempting a bold run followed by a colon, halved that to 7. Generalising the exemption to any definition list separator, colon or dash or em dash, took it to **zero**. Every hit in the corpus was a definition list.
 
-This is recorded as a known tension rather than settled: if the rule proves noisy in practice, narrowing it to fire only when the bold run is a full sentence, or only when no colon follows, is the first thing to try.
+Checking the examples the rule was drawn from then closed the question:
 
-A wider measurement against 1715 markdown files outside this repository found the analyzer firing on 6.2 percent of files, 107 of 1715, and roughly half of those, 49 files, are definition list shaped: a bold run followed by a colon, the same glossary shape this repository's own two suppressed files carry. One file in sixteen is a materially different picture than a one off tension noticed in two files of one repository, and the decision about narrowing the analyzer should be made against that number rather than against this repository alone.
+```
+* **Standard Rotary Saws**: Typically used for drywall and light materials.
+* **Heavy-Duty Rotary Saws**: Designed for tougher materials
+```
+
+Those are definition lists as well. The source describes the tell as "a list marker followed by an inline boldfaced header, separated with a colon from the remaining descriptive text," which is exactly the shape a human written glossary uses. There is no syntactic test that separates them, because what distinguishes the two is whether the surrounding prose was machine written, and the analyzer cannot see that.
+
+So the rule now ships **off by default**, enabled per repo with a `voice-check-enable` block naming `structure.bold_headers`. The two suppressions are removed, and both files scan clean without them, which is the check that the rule finally matches its intent rather than being papered over.
+
+One honest limit on that conclusion: zero true positives in this corpus does not prove the rule wrong, because the corpus contains no machine generated encyclopedia prose, which is the population the tell was characterised on. What it does establish is that on technical documentation the rule is pure noise, and that is the population this project writes. This is the same failure, for the same reason, as the rhythm result recorded above.
 
 ## Error handling
 

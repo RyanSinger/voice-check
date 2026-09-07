@@ -8,6 +8,7 @@ skills read, the engine parses fenced blocks whose info string is one of:
     voice-check-phrases     one literal phrase per line, case insensitive
     voice-check-regex       one raw regex per line, case insensitive
     voice-check-disable     rule name or id, optionally "<rule> in <glob>"
+    voice-check-enable      same shape, switches on a rule that ships off
     voice-check-severity    "<rule name or id> = high|medium|low"
     voice-check-exclude     one path glob per line, skipped entirely
 
@@ -34,6 +35,7 @@ RULE_KINDS = {
 
 SETTING_KINDS = {
     "voice-check-disable",
+    "voice-check-enable",
     "voice-check-severity",
     "voice-check-exclude",
 }
@@ -53,6 +55,7 @@ KNOWN_IDENTIFIERS = (
 class Config:
     extra_rows: List[dict] = field(default_factory=list)
     disabled: List[tuple] = field(default_factory=list)
+    enabled: List[tuple] = field(default_factory=list)
     severity: dict = field(default_factory=dict)
     exclude: List[str] = field(default_factory=list)
     warnings: List[str] = field(default_factory=list)
@@ -64,12 +67,26 @@ class Config:
     def is_excluded(self, rel_path: str) -> bool:
         return any(fnmatch(rel_path, g) for g in self.exclude)
 
-    def is_disabled(self, row: dict, rel_path: str) -> bool:
-        for identifier, glob in self.disabled:
+    def _names(self, entries, row: dict, rel_path: str) -> bool:
+        """True when entries name this row and apply at this path."""
+        for identifier, glob in entries:
             if identifier not in (row["name"], row["id"]):
                 continue
             if glob is None or fnmatch(rel_path, glob):
                 return True
+        return False
+
+    def is_disabled(self, row: dict, rel_path: str) -> bool:
+        """A row is off when explicitly disabled, or when it ships off by
+        default and no repo has asked for it.
+
+        An explicit disable beats an explicit enable: when a supplement says
+        both, the quieter reading is the safer one.
+        """
+        if self._names(self.disabled, row, rel_path):
+            return True
+        if row.get("default_off"):
+            return not self._names(self.enabled, row, rel_path)
         return False
 
     def severity_for(self, row: dict) -> str:
@@ -125,16 +142,19 @@ def _add_setting(cfg: Config, info: str, value: str, where: str) -> None:
         cfg.exclude.append(value)
         return
 
-    if info == "voice-check-disable":
+    if info in ("voice-check-disable", "voice-check-enable"):
+        verb = "disable" if info.endswith("disable") else "enable"
+        target = cfg.disabled if verb == "disable" else cfg.enabled
         parts = value.split(" in ", 1)
         identifier = parts[0].strip()
         glob = parts[1].strip() if len(parts) == 2 else None
         if not identifier:
-            cfg.warnings.append(f"{where}: empty disable entry")
+            cfg.warnings.append(f"{where}: empty {verb} entry")
             return
         if identifier not in KNOWN_IDENTIFIERS:
-            cfg.warnings.append(f"{where}: unknown rule {identifier!r}, disable has no effect")
-        cfg.disabled.append((identifier, glob))
+            cfg.warnings.append(
+                f"{where}: unknown rule {identifier!r}, {verb} has no effect")
+        target.append((identifier, glob))
         return
 
     if info == "voice-check-severity":

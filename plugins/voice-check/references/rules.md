@@ -63,7 +63,7 @@ Write neutral, not like ad copy.
   testing to shipping", which describes a real sequence.
 
 - **Challenges-and-future-prospects** `[engine + skill]`: "Despite its [good thing], [subject] faces challenges..." followed by vague optimism. Never.
-- **Bolded inline headers on every bullet** `[engine + skill]`: Use sparingly, not mechanically.
+- **Bolded inline headers on every bullet** `[engine, opt in]`: Use sparingly, not mechanically. The engine ships this one OFF. Measured across 206 markdown files it fired on 6.8 percent of them with no identifiable true positive: every hit was a definition list. The examples this rule was drawn from are definition lists too, so no syntactic test separates the tell from the legitimate pattern, and what distinguishes them is whether the surrounding prose was machine written, which the engine cannot see. Turn it on for a repo whose prose is article shaped with a `voice-check-enable` block naming `structure.bold_headers`.
 - **Elegant variation** `[skill only]`: Don't swap synonyms to avoid repeating a word. Say "Nick" three times rather than "the engineer," "the technical lead," "the key contributor."
 - **Balanced-debate framing** `[engine + skill]`: presenting every topic as a two-sided debate is a tell. Take a position or report the facts.
 
@@ -136,6 +136,7 @@ voice-check-words      one word per line, matched with word boundaries
 voice-check-phrases    one literal phrase per line, matched case-insensitive
 voice-check-regex      one raw regex per line, matched case-insensitive
 voice-check-disable    rule name or id, optionally "<rule> in <path glob>"
+voice-check-enable     same shape, switches on a rule that ships off
 voice-check-severity   "<rule name or id> = high|medium|low"
 voice-check-exclude    one path glob per line, skipped entirely
 ```

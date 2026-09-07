@@ -144,3 +144,75 @@ def test_unknown_rule_id_warns_but_still_records(tmp_path):
     c = config.load(p)
     assert ("no_such_rule.anywhere", None) in c.disabled
     assert any("no_such_rule.anywhere" in w for w in c.warnings)
+
+
+# --- opt in rules ----------------------------------------------------------
+# A row marked default_off does nothing until a repo asks for it. Used for
+# rules whose measured false positive rate on ordinary prose is too high to
+# justify enabling for everyone.
+
+
+def _off_row():
+    return {"name": "structure", "id": "structure.bold_headers",
+            "severity": "low", "default_off": True}
+
+
+def _normal_row():
+    return {"name": "puffery", "id": "puffery.crucial", "severity": "medium"}
+
+
+def test_default_off_row_is_disabled_without_an_enable():
+    assert config.Config.empty().is_disabled(_off_row(), "a.md")
+
+
+def test_default_off_row_is_enabled_by_name():
+    c = config.Config.empty()
+    c.enabled.append(("structure", None))
+    assert not c.is_disabled(_off_row(), "a.md")
+
+
+def test_default_off_row_is_enabled_by_id():
+    c = config.Config.empty()
+    c.enabled.append(("structure.bold_headers", None))
+    assert not c.is_disabled(_off_row(), "a.md")
+
+
+def test_enable_is_path_scoped_like_disable():
+    c = config.Config.empty()
+    c.enabled.append(("structure.bold_headers", "docs/**"))
+    assert not c.is_disabled(_off_row(), "docs/a.md")
+    assert c.is_disabled(_off_row(), "src/a.md")
+
+
+def test_explicit_disable_beats_an_explicit_enable():
+    """When a repo says both, take the quieter reading."""
+    c = config.Config.empty()
+    c.enabled.append(("structure.bold_headers", None))
+    c.disabled.append(("structure.bold_headers", None))
+    assert c.is_disabled(_off_row(), "a.md")
+
+
+def test_rows_without_the_flag_are_untouched():
+    c = config.Config.empty()
+    assert not c.is_disabled(_normal_row(), "a.md")
+    c.disabled.append(("puffery", None))
+    assert c.is_disabled(_normal_row(), "a.md")
+
+
+def test_enable_block_parsed(tmp_path):
+    p = _write(tmp_path, "```voice-check-enable\nstructure.bold_headers\n```\n")
+    c = config.load(p)
+    assert ("structure.bold_headers", None) in c.enabled
+
+
+def test_enable_block_with_path_scope(tmp_path):
+    p = _write(tmp_path, "```voice-check-enable\nstructure in docs/ref/**\n```\n")
+    c = config.load(p)
+    assert ("structure", "docs/ref/**") in c.enabled
+
+
+def test_unknown_identifier_in_enable_warns_but_still_records(tmp_path):
+    p = _write(tmp_path, "```voice-check-enable\nno_such_rule.anywhere\n```\n")
+    c = config.load(p)
+    assert ("no_such_rule.anywhere", None) in c.enabled
+    assert any("no_such_rule.anywhere" in w for w in c.warnings)
