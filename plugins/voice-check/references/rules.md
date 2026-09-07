@@ -95,6 +95,37 @@ In addition to the rules above, the engine loads extra rows from a per-repo `.cl
 voice-check-words      one word per line, matched with word boundaries
 voice-check-phrases    one literal phrase per line, matched case-insensitive
 voice-check-regex      one raw regex per line, matched case-insensitive
+voice-check-disable    rule name or id, optionally "<rule> in <path glob>"
+voice-check-severity   "<rule name or id> = high|medium|low"
+voice-check-exclude    one path glob per line, skipped entirely
 ```
 
-Each non-blank, non-comment line inside such a block becomes a supplement rule row appended to the scanner table at scan time. Findings from supplement rules carry the rule name `supplement:<kind>` so they are attributable.
+Each non-blank, non-comment line inside a `voice-check-words`, `voice-check-phrases`, or `voice-check-regex` block becomes a supplement rule row appended to the scanner table at scan time. Findings from supplement rules carry the rule name `supplement:<kind>` so they are attributable.
+
+`voice-check-disable`, `voice-check-severity`, and `voice-check-exclude` change how existing rows are treated instead of adding new ones. A disable entry can name a rule by its plain name (every row under that name) or by a single stable id, and can optionally scope itself to one path glob with `in`. A severity entry reassigns a rule's default severity the same way. An exclude entry is a path glob, matched with `fnmatch` semantics where `*` also matches a path separator, so `docs/vendor/**` covers `docs/vendor/a/b.md`. A bad line is skipped and recorded as a warning; the rest of the supplement still loads.
+
+Rule ids can change between releases. If a supplement disables or reassigns severity for an id that no longer exists (for example, `ai_vocab_cluster.key` was removed and `ai_vocab_cluster.align` became `ai_vocab_cluster.align_with`), the engine warns that the identifier is unknown and the entry has no effect, rather than failing. Check `rules.py` for current ids after an upgrade if a supplement directive stops doing anything.
+
+## Suppression directives
+
+Any file can suppress rules inline with an HTML comment, which stays
+invisible in rendered markdown:
+
+```
+<!-- voice-check: ignore -->                 suppress this line
+<!-- voice-check: ignore puffery -->         suppress one rule on this line
+<!-- voice-check: disable -->                suppress from here on
+<!-- voice-check: enable -->                 resume after a disable
+```
+
+Arguments accept a rule name, which covers every row under that name, or a
+single rule id such as `puffery.crucial`. A comma separated list works too.
+A `disable` with no matching `enable` runs to the end of the file.
+
+Only one `disable` can be open at a time. A second `disable` opened while
+the first is still open is ignored entirely, rule arguments included; the
+scope and rule list that apply until the next `enable` are the first
+`disable`'s. Close the open one before opening another.
+
+Directives inside fenced code blocks have no effect, so the examples above
+are inert.

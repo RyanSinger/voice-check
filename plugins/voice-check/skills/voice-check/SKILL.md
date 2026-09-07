@@ -28,8 +28,10 @@ Read `../../references/rules.md` (the file lives at the plugin root, two levels 
 Run this script (execute it, do not read it as reference):
 
 ```bash
-python3 ../../engine/voice_check.py --report-only <target-file>
+python3 ../../engine/voice_check.py --report-only --min-severity low <target-file>
 ```
+
+`--min-severity low` is required. Without it the engine collapses lower severity findings into a summary line, and Step 4 could not tell a clean file from a quiet one.
 
 The path is relative to this skill directory; resolve it against the installed plugin location. The engine covers every rule tagged `[engine + skill]` plus supplement rules, and always exits 0. If `python3` is unavailable, skip to Step 5 and cover the engine-tagged rules manually as well.
 

@@ -14,7 +14,18 @@ The plugin has three layers that must stay in sync:
 2. **Skills** (`plugins/voice-check/skills/`): thin Markdown shells that reference `../../references/rules.md` (two levels up, at the plugin root, NOT inside the skill dir). Two skills with deliberate timing split:
    - `writing-guard/SKILL.md`: proactive, loads *before* Claude drafts prose, self-censors during writing.
    - `voice-check/SKILL.md`: reactive, scans/fixes existing files; also used in report-only mode by the pre-commit hook.
-3. **Python engine** (`plugins/voice-check/engine/`): deterministic subset of the rules for hook-speed scanning. `voice_check.py` is the CLI entry (`--report-only` for hook mode, always exits 0, advisory). `rules.py` holds regex/word lists. `supplement.py` walks up from a target file to the git root to find `.claude/voice-check.md` (per-repo supplement, first match wins, no aggregation).
+3. **Python engine** (`plugins/voice-check/engine/`): five modules with an
+   acyclic dependency graph. `voice_check.py` is the CLI entry
+   (`--report-only` for hook mode, `--min-severity` for verbosity, `--lines`
+   for diff scoping, always exits 0, advisory). `document.py` decides what
+   text is prose, producing length preserving masked lines plus suppression
+   directives parsed from the raw text. `config.py` finds `.claude/voice-check.md`
+   by walking up to the git root (first match wins, no aggregation) and parses
+   six fenced block kinds. `rules.py` holds the rule table, where every row has
+   a stable id and a severity. `scanner.py` runs rows against a document and
+   applies suppression, severity, and line ranges.
+
+Rule ids can shift between releases. A supplement that disables or reassigns severity for a stale id (for example, the removed `ai_vocab_cluster.key` or the renamed `ai_vocab_cluster.align`, now `ai_vocab_cluster.align_with`) prints a warning and otherwise has no effect; see `references/rules.md` for current ids.
 
 Important: the engine duplicates a subset of the markdown rules as code. When adding a rule, decide whether it needs to run in the hook (add to both `rules.py` and `references/rules.md`) or only at skill-invocation time (markdown only). The markdown file is authoritative for the skill path; `rules.py` is authoritative for the hook path.
 
@@ -28,13 +39,13 @@ Important: the engine duplicates a subset of the markdown rules as code. When ad
 
 ## Commands
 
-Run the engine tests (55 pytest cases in `plugins/voice-check/tests/test_engine.py`):
+Run the engine tests (154 pytest cases across `plugins/voice-check/tests/`):
 
 ```bash
 cd plugins/voice-check
 python3 -m venv .venv
 .venv/bin/pip install pytest
-.venv/bin/python -m pytest tests/test_engine.py -v
+.venv/bin/python -m pytest tests/ -v
 ```
 
 Runtime engine is stdlib-only; pytest is only needed for the test suite. Requires Python 3.11+.

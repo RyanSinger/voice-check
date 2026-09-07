@@ -54,6 +54,13 @@ findings_total=0
 # Extract the added-line ranges for one staged file from its diff hunks.
 # Prints "12-18,40-41" or nothing. Falls back to nothing on any failure, and
 # an empty result means the whole file is scanned.
+#
+# Safe under "set -e" with no explicit "|| true" on the assignment below.
+# Not because testing the result later exempts the assignment, it does not,
+# but because this pipeline has no "pipefail": its exit status is sed's, and
+# sed exits 0 on essentially any input, including empty input or a failed
+# git diff upstream. If the final stage ever stops being sed, re-check that
+# this still holds or add "|| true" to the assignment explicitly.
 changed_ranges() {
   git diff --cached -U0 -- "$1" 2>/dev/null | awk '
     /^@@/ {
