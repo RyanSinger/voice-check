@@ -23,15 +23,44 @@ Row schema (dict):
 import re
 from typing import List, Dict, Iterable, Optional
 
+SEVERITY_ORDER = {"low": 1, "medium": 2, "high": 3}
+DEFAULT_SEVERITY = "medium"
+
+_SEVERITY_BY_NAME = {
+    "no_dashes": "high",
+    "markup_artifacts": "high",
+    "ai_vocab_cluster": "low",
+}
+
+
+def slug(text: str) -> str:
+    """Turn a rule pattern into a readable id fragment.
+
+    Only used for word and phrase rows, whose patterns are plain language.
+    Regex rows carry an explicit id instead, because slugging a regex
+    produces unreadable noise.
+    """
+    s = re.sub(r"[^a-z0-9]+", "_", text.lower()).strip("_")
+    return s or "rule"
+
+
+def _finalize(rows):
+    """Fill in id and severity on every row that does not set them."""
+    for r in rows:
+        r.setdefault("severity", _SEVERITY_BY_NAME.get(r["name"], DEFAULT_SEVERITY))
+        r.setdefault("id", f"{r['name']}.{slug(r['pattern'])}")
+    return rows
+
 
 # ---------------------------------------------------------------------------
 # Rule table
 # ---------------------------------------------------------------------------
 
-RULES: List[dict] = [
+RULES: List[dict] = _finalize([
     # -- dashes -------------------------------------------------------------
     {
         "name": "no_dashes",
+        "id": "no_dashes.em_en",
         "category": "dashes",
         "kind": "regex",
         "pattern": r"[\u2014\u2013]",
@@ -40,6 +69,7 @@ RULES: List[dict] = [
     },
     {
         "name": "no_dashes",
+        "id": "no_dashes.spaced_hyphen",
         "category": "dashes",
         "kind": "regex",
         "pattern": r"\s-\s",
@@ -68,21 +98,22 @@ RULES: List[dict] = [
     *[
         {
             "name": "promotional_tone",
+            "id": f"promotional_tone.{slug}",
             "category": "promotional",
             "kind": "regex",
             "pattern": p,
             "message": f"Promotional tone: {label}. Write neutral, not ad copy.",
             "scope": "line",
         }
-        for p, label in [
-            (r"\bboasts\b", "'boasts'"),
-            (r"\bvibrant\b", "'vibrant'"),
-            (r"\bnestled\b", "'nestled'"),
-            (r"\bin the heart of\b", "'in the heart of'"),
-            (r"\bgroundbreaking\b", "'groundbreaking'"),
-            (r"\bshowcasing\b", "'showcasing'"),
-            (r"\bcommitment to\b", "'commitment to'"),
-            (r"\bnatural beauty\b", "'natural beauty'"),
+        for p, label, slug in [
+            (r"\bboasts\b", "'boasts'", "boasts"),
+            (r"\bvibrant\b", "'vibrant'", "vibrant"),
+            (r"\bnestled\b", "'nestled'", "nestled"),
+            (r"\bin the heart of\b", "'in the heart of'", "in_the_heart_of"),
+            (r"\bgroundbreaking\b", "'groundbreaking'", "groundbreaking"),
+            (r"\bshowcasing\b", "'showcasing'", "showcasing"),
+            (r"\bcommitment to\b", "'commitment to'", "commitment_to"),
+            (r"\bnatural beauty\b", "'natural beauty'", "natural_beauty"),
         ]
     ],
 
@@ -113,6 +144,7 @@ RULES: List[dict] = [
     *[
         {
             "name": "copula_avoidance",
+            "id": f"copula_avoidance.{verb}_as",
             "category": "copula_avoidance",
             "kind": "regex",
             # Require the phrase to be followed by a determiner or noun-like
@@ -130,6 +162,7 @@ RULES: List[dict] = [
     # from the README seed list to avoid catching neutral -ing words.
     {
         "name": "dangling_participle",
+        "id": "dangling_participle.gerund_phrase",
         "category": "dangling_participles",
         "kind": "regex",
         "pattern": (
@@ -207,6 +240,7 @@ RULES: List[dict] = [
     ],
     {
         "name": "bridge_phrases",
+        "id": "bridge_phrases.in_this_section_we",
         "category": "bridge_phrases",
         "kind": "regex",
         "pattern": r"\bin this section,?\s+we\b",
@@ -215,6 +249,7 @@ RULES: List[dict] = [
     },
     {
         "name": "bridge_phrases",
+        "id": "bridge_phrases.at_the_end_of_the_day",
         "category": "bridge_phrases",
         "kind": "regex",
         "pattern": r"\bat the end of the day\b(?!\s+shift\b)",
@@ -244,6 +279,7 @@ RULES: List[dict] = [
     ],
     {
         "name": "vocab_2026",
+        "id": "vocab_2026.quietly_gerund",
         "category": "vocab_2026",
         "kind": "regex",
         # Stop list keeps non-gerund "ing" words (during, morning...) from firing.
@@ -253,6 +289,7 @@ RULES: List[dict] = [
     },
     {
         "name": "vocab_2026",
+        "id": "vocab_2026.send_a_signal",
         "category": "vocab_2026",
         "kind": "regex",
         "pattern": r"\bsends?\s+(?:a|the)\s+signal\b",
@@ -263,6 +300,7 @@ RULES: List[dict] = [
     # -- leaked model markup artifacts --------------------------------------
     {
         "name": "markup_artifacts",
+        "id": "markup_artifacts.citation_tokens",
         "category": "markup_artifacts",
         "kind": "regex",
         "pattern": (
@@ -275,31 +313,14 @@ RULES: List[dict] = [
     },
     {
         "name": "markup_artifacts",
+        "id": "markup_artifacts.emoji_bullet",
         "category": "markup_artifacts",
         "kind": "regex",
         "pattern": r"^\s*[☀-➿⬀-⯿\U0001F300-\U0001FAFF]️?\s+",
         "message": "Emoji used as a bullet marker. Use standard list markers.",
         "scope": "line",
     },
-]
-
-
-# Back-compat export expected by older tests and external callers.
-AI_VOCAB_CLUSTER = {
-    "additionally", "align", "crucial", "delve", "emphasizing",
-    "enduring", "enhance", "fostering", "garner", "highlight",
-    "interplay", "intricate", "intricacies", "key", "landscape",
-    "pivotal", "showcase", "tapestry", "testament", "underscore",
-    "valuable", "vibrant", "leveraging", "leverage",
-}
-
-PUFFERY_WORDS = {
-    r["pattern"] for r in RULES if r["name"] == "puffery"
-}
-
-PROMOTIONAL_PHRASES = [
-    r["pattern"] for r in RULES if r["name"] == "promotional_tone"
-]
+])
 
 
 # ---------------------------------------------------------------------------
@@ -455,79 +476,3 @@ def scan_text(text: str, extra_rows: Optional[Iterable[dict]] = None) -> List[di
 
     return findings
 
-
-# ---------------------------------------------------------------------------
-# Back-compat shims for older callers and tests that imported these helpers
-# directly. Each delegates to the table scanner, filtered to the relevant
-# rule category.
-# ---------------------------------------------------------------------------
-
-def _filter_rows(category: str, scope: str) -> List[dict]:
-    return [r for r in RULES if r["category"] == category and r.get("scope", "line") == scope]
-
-
-def check_dashes(line: str, line_num: int) -> List[dict]:
-    out = []
-    for row in _filter_rows("dashes", "line"):
-        for m in compiled(row).finditer(line):
-            out.append({
-                "rule": row["name"],
-                "line": line_num,
-                "col": m.start() + 1,
-                "snippet": line.rstrip("\n"),
-                "message": row["message"],
-            })
-    return out
-
-
-def check_puffery(line: str, line_num: int) -> List[dict]:
-    out = []
-    for row in _filter_rows("puffery", "line"):
-        for m in compiled(row).finditer(line):
-            out.append({
-                "rule": row["name"],
-                "line": line_num,
-                "col": m.start() + 1,
-                "snippet": line.rstrip("\n"),
-                "message": row["message"],
-            })
-    return out
-
-
-def check_promotional(line: str, line_num: int) -> List[dict]:
-    out = []
-    for row in _filter_rows("promotional", "line"):
-        for m in compiled(row).finditer(line):
-            out.append({
-                "rule": row["name"],
-                "line": line_num,
-                "col": m.start() + 1,
-                "snippet": line.rstrip("\n"),
-                "message": row["message"],
-            })
-    return out
-
-
-def check_ai_vocab_cluster(text: str) -> List[dict]:
-    # Run only the ai_vocab_cluster doc-scope rules via the scanner.
-    rows = [r for r in RULES if r["category"] == "ai_vocab_cluster"]
-
-    scan_src = _strip_code_blocks(text)
-    hits = []
-    for row in rows:
-        for m in compiled(row).finditer(scan_src):
-            hits.append((row["pattern"], m.start()))
-    if len(hits) < 2:
-        return []
-    matched_words = sorted({h[0] for h in hits})
-    return [{
-        "rule": "ai_vocab_cluster",
-        "line": 0,
-        "col": 0,
-        "snippet": "",
-        "message": (
-            f"AI vocabulary cluster: {len(hits)} occurrences across "
-            f"{len(matched_words)} words: {', '.join(matched_words)}. "
-            f"Replace with plain language."
-        ),
-    }]

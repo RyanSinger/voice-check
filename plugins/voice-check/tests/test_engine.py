@@ -704,3 +704,46 @@ def test_healer_heals_from_main_checkout_subdir(tmp_path):
     assert "healed" in result.stdout
     text = (repo / ".git" / "hooks" / "pre-commit").read_text()
     assert "resolve_engine" in text
+
+
+import rules  # noqa: E402
+
+
+def test_every_rule_row_has_a_unique_id():
+    ids = [r["id"] for r in rules.RULES]
+    assert len(ids) == len(set(ids)), "duplicate rule ids found"
+    assert all(ids), "some rule row has an empty id"
+
+
+def test_every_rule_row_has_a_valid_severity():
+    for r in rules.RULES:
+        assert r["severity"] in rules.SEVERITY_ORDER, r["id"]
+
+
+def test_word_rows_derive_readable_ids():
+    by_id = {r["id"] for r in rules.RULES}
+    assert "puffery.groundbreaking" in by_id
+    assert "hedging.would_like_to" in by_id
+
+
+def test_regex_rows_carry_explicit_ids():
+    by_id = {r["id"] for r in rules.RULES}
+    assert "no_dashes.em_en" in by_id
+    assert "no_dashes.spaced_hyphen" in by_id
+
+
+def test_default_severity_assignments():
+    sev = {r["name"]: r["severity"] for r in rules.RULES}
+    assert sev["no_dashes"] == "high"
+    assert sev["markup_artifacts"] == "high"
+    assert sev["ai_vocab_cluster"] == "low"
+    assert sev["puffery"] == "medium"
+
+
+def test_dead_backcompat_shims_are_gone():
+    for name in (
+        "check_dashes", "check_puffery", "check_promotional",
+        "check_ai_vocab_cluster", "AI_VOCAB_CLUSTER",
+        "PUFFERY_WORDS", "PROMOTIONAL_PHRASES",
+    ):
+        assert not hasattr(rules, name), f"{name} should have been deleted"
