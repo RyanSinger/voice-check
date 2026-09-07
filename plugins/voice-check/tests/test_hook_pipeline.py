@@ -478,3 +478,149 @@ def test_healer_noop_when_version_stamp_is_current(tmp_path):
     assert result.returncode == 0
     assert "healed" not in result.stdout
     assert hook.read_bytes() == before
+
+
+# ---------------------------------------------------------------------------
+# The commit-msg hook template
+# ---------------------------------------------------------------------------
+
+COMMIT_MSG_TEMPLATE = TEMPLATES_DIR / "commit-msg.sh"
+
+
+def _run_commit_msg_template(repo: Path, message: str) -> subprocess.CompletedProcess:
+    """Run the raw (unrendered) commit-msg template against a message file.
+
+    The template's placeholder is not substituted here. resolve_engine's
+    first branch reads $VOICE_CHECK_ENGINE, so pointing that at the in-repo
+    engine exercises the real template without an install step.
+    """
+    msg_file = repo / ".git" / "COMMIT_EDITMSG"
+    msg_file.parent.mkdir(parents=True, exist_ok=True)
+    msg_file.write_text(message)
+
+    env = _git_env()
+    env["VOICE_CHECK_PYTHON"] = sys.executable
+    env["VOICE_CHECK_ENGINE"] = str(ENGINE_FILE)
+    return subprocess.run(
+        ["bash", str(COMMIT_MSG_TEMPLATE), str(msg_file)],
+        cwd=str(repo),
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+
+
+def test_commit_msg_template_exists_with_markers_and_placeholder():
+    assert COMMIT_MSG_TEMPLATE.is_file(), f"missing template: {COMMIT_MSG_TEMPLATE}"
+    text = COMMIT_MSG_TEMPLATE.read_text()
+    assert MARKER_START in text
+    assert MARKER_END in text
+    assert "__VOICE_CHECK_ENGINE__" in text
+    assert "# voice-check hook version: " in text
+
+
+def test_commit_msg_reports_an_em_dash(fresh_repo):
+    r = _run_commit_msg_template(fresh_repo, "Fix the parser — nested quotes\n")
+    assert r.returncode == 0
+    combined = r.stdout + r.stderr
+    assert "no_dashes" in combined
+
+
+def test_commit_msg_stays_silent_on_a_clean_message(fresh_repo):
+    r = _run_commit_msg_template(
+        fresh_repo,
+        "fix(engine): thread surface through the scanner\n"
+        "\n"
+        "Commit messages now run a restricted rule set.\n",
+    )
+    assert r.returncode == 0
+    assert (r.stdout + r.stderr).strip() == ""
+
+
+def test_commit_msg_applies_the_allowlist(fresh_repo):
+    """Puffery is not on the commit allowlist; a dash is."""
+    r = _run_commit_msg_template(
+        fresh_repo, "Fix the thing - properly\n\nA groundbreaking change.\n")
+    assert r.returncode == 0
+    combined = r.stdout + r.stderr
+    assert "no_dashes" in combined
+    assert "puffery" not in combined
+
+
+def test_commit_msg_ignores_git_comments_and_the_verbose_diff(fresh_repo):
+    """The case most likely to catch a real bug.
+
+    git stripspace --strip-comments removes the scissors line but leaves the
+    diff beneath it, so the hook must cut at the scissors marker first.
+    Without that cut this message reports an em dash from someone else's code.
+    """
+    message = (
+        "Real message here\n"
+        "\n"
+        "# Please enter the commit message for your changes.\n"
+        "# ------------------------ >8 ------------------------\n"
+        "# Do not modify or remove the line above.\n"
+        "diff --git a/x.md b/x.md\n"
+        "+a line with an em dash — here\n"
+    )
+    r = _run_commit_msg_template(fresh_repo, message)
+    assert r.returncode == 0
+    combined = r.stdout + r.stderr
+    assert "no_dashes" not in combined, (
+        f"verbose diff was scanned:\n{combined}")
+
+
+def test_commit_msg_keeps_the_body_when_there_is_no_scissors_line(fresh_repo):
+    message = (
+        "Subject line\n"
+        "\n"
+        "Body with an em dash — in it.\n"
+        "\n"
+        "# Please enter the commit message for your changes.\n"
+    )
+    r = _run_commit_msg_template(fresh_repo, message)
+    assert r.returncode == 0
+    assert "no_dashes" in (r.stdout + r.stderr)
+
+
+def test_commit_msg_is_silent_on_an_aborted_empty_message(fresh_repo):
+    message = (
+        "\n"
+        "# Please enter the commit message for your changes.\n"
+        "# Aborting commit due to empty commit message.\n"
+    )
+    r = _run_commit_msg_template(fresh_repo, message)
+    assert r.returncode == 0
+    assert (r.stdout + r.stderr).strip() == ""
+
+
+def test_commit_msg_leaves_no_scratch_files_behind(fresh_repo):
+    _run_commit_msg_template(fresh_repo, "Fix the parser — nested quotes\n")
+    leftovers = sorted(p.name for p in (fresh_repo / ".git").glob("voice-check-*"))
+    assert leftovers == [], f"scratch files left behind: {leftovers}"
+
+
+def test_commit_msg_exits_zero_when_the_engine_is_missing(fresh_repo):
+    msg_file = fresh_repo / ".git" / "COMMIT_EDITMSG"
+    msg_file.parent.mkdir(parents=True, exist_ok=True)
+    msg_file.write_text("Fix the parser — nested quotes\n")
+
+    env = _git_env()
+    env["HOME"] = str(fresh_repo / "empty-home")
+    env["VOICE_CHECK_ENGINE"] = str(fresh_repo / "nope" / "voice_check.py")
+    r = subprocess.run(
+        ["bash", str(COMMIT_MSG_TEMPLATE), str(msg_file)],
+        cwd=str(fresh_repo), capture_output=True, text=True, env=env,
+    )
+    assert r.returncode == 0
+
+
+def test_commit_msg_exits_zero_when_given_no_argument(fresh_repo):
+    env = _git_env()
+    env["VOICE_CHECK_PYTHON"] = sys.executable
+    env["VOICE_CHECK_ENGINE"] = str(ENGINE_FILE)
+    r = subprocess.run(
+        ["bash", str(COMMIT_MSG_TEMPLATE)],
+        cwd=str(fresh_repo), capture_output=True, text=True, env=env,
+    )
+    assert r.returncode == 0
