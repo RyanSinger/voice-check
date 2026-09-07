@@ -71,7 +71,10 @@ def scan(doc, cfg, rel_path: str = "", line_ranges=None) -> List[dict]:
                 # file level disable stops the finding rather than hiding it.
                 if _suppressed(doc, hit_line, row):
                     continue
-                hits.append((row["pattern"], hit_line))
+                # Word and phrase patterns are already plain language. A
+                # regex row's pattern is not fit for display, so it carries
+                # an explicit "term" the message should show instead.
+                hits.append((row.get("term", row["pattern"]), hit_line))
 
         if not hits:
             continue

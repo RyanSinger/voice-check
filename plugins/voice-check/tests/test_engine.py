@@ -74,6 +74,44 @@ def test_three_ai_vocab_words_flagged(tmp_path):
     assert len(cluster_findings) == 1
 
 
+def test_additionally_fires_only_when_sentence_initial(tmp_path):
+    """rules.md documents this member as "Additionally (starting
+    sentences)," not a bare word. A bullet list item is one of the most
+    common places a sentence starts, and mask_line reduces its marker to a
+    single leading space, so that case must fire too. "pivotal" is the
+    second cluster word each case needs to clear doc_min=2.
+    """
+    f = tmp_path / "dirty.md"
+    f.write_text("- Additionally, this shift is pivotal.\n")
+    findings = voice_check.scan(f)
+    cluster_findings = [x for x in findings if x["rule"] == "ai_vocab_cluster"]
+    assert len(cluster_findings) == 1
+
+    g = tmp_path / "ok.md"
+    g.write_text("We should additionally consider this pivotal detail.\n")
+    findings = voice_check.scan(g)
+    cluster_findings = [x for x in findings if x["rule"] == "ai_vocab_cluster"]
+    assert cluster_findings == []
+
+
+def test_align_with_fires_only_as_adjacent_phrase(tmp_path):
+    """rules.md documents this member as "align with," not bare "align."
+    "pivotal" is the second cluster word each case needs to clear
+    doc_min=2, so each result isolates whether "align" itself counted.
+    """
+    f = tmp_path / "dirty.md"
+    f.write_text("Align with the schema before shipping; this detail is pivotal.\n")
+    findings = voice_check.scan(f)
+    cluster_findings = [x for x in findings if x["rule"] == "ai_vocab_cluster"]
+    assert len(cluster_findings) == 1
+
+    g = tmp_path / "ok.md"
+    g.write_text("Align the config with the schema; this detail is pivotal.\n")
+    findings = voice_check.scan(g)
+    cluster_findings = [x for x in findings if x["rule"] == "ai_vocab_cluster"]
+    assert cluster_findings == []
+
+
 def test_puffery_word_flagged(tmp_path):
     f = tmp_path / "dirty.md"
     f.write_text("This is a groundbreaking system.\n")

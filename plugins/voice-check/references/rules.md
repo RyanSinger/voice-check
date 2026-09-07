@@ -18,11 +18,15 @@ Cut "I can take on," "I could potentially help with," "I'm pushing for this dire
 ### No copula avoidance `[engine + skill]`
 Don't replace "is" with "serves as," "stands as," "acts as," "functions as," "represents," "marks." Just say "is." The engine catches the "as" variants ("serves as", "stands as", "acts as", "functions as") with a word-boundary regex. Nuanced replacements like "represents" are left to the skill.
 
+<!-- voice-check: disable ai_vocab_cluster, puffery, promotional_tone, vocab_2026, bridge_phrases, hedging, vague_attribution, dangling_participle -->
+
 ## AI Vocabulary Cluster (flag when 2+ appear in the same document) `[engine + skill]`
 
 Additionally (starting sentences), align with, crucial, delve, emphasizing, enduring, enhance, fostering, garner, highlight (as verb), interplay, intricate/intricacies, key (as adjective), landscape (abstract noun), pivotal, showcase, tapestry (abstract noun), testament, underscore (as verb), valuable, vibrant.
 
 One might be fine. Two or more in the same document is a pattern. Replace with plain language.
+
+`key (as adjective)` is skill only. Telling the adjective "a key decision" apart from the plain noun "an API key" needs part of speech judgment that a regex cannot make, so the engine omits `key` from its cluster list entirely and leaves it to the skill.
 
 ## Puffery and Significance Language `[engine + skill]`
 
@@ -80,6 +84,8 @@ Phrase forms `[engine + skill]`: "quietly [verb]ing," "this matters because," "t
 Leaked model citation tokens are proof of unedited AI output. Flag and delete: `contentReference`, `oaicite`, `turn0search` style tokens, `[cite:` fragments, `[span_0]` fragments, `grok_card`, `grok_render`, `ppl-ai-file-upload`, `attached_file`.
 
 Emoji used as bullet markers (an emoji starting a line as if it were a list marker) is also flagged. Use standard list markers. Artifacts quoted inside fenced code blocks are not flagged.
+
+<!-- voice-check: enable -->
 
 ## Per-repo supplements
 

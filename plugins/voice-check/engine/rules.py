@@ -200,6 +200,9 @@ RULES: List[dict] = _finalize([
     ],
 
     # -- AI vocabulary cluster (doc scope) ----------------------------------
+    # "key" is left out entirely. rules.md documents it as "key (as
+    # adjective)," and adjective versus noun is not something a regex can
+    # judge, so it stays skill-only.
     *[
         {
             "name": "ai_vocab_cluster",
@@ -212,13 +215,52 @@ RULES: List[dict] = _finalize([
             "doc_group": "ai_vocab_cluster",
         }
         for w in [
-            "additionally", "align", "crucial", "delve", "emphasizing",
+            "crucial", "delve", "emphasizing",
             "enduring", "enhance", "fostering", "garner", "highlight",
-            "interplay", "intricate", "intricacies", "key", "landscape",
+            "interplay", "intricate", "intricacies", "landscape",
             "pivotal", "showcase", "tapestry", "testament", "underscore",
             "valuable", "vibrant", "leveraging", "leverage",
         ]
     ],
+    {
+        # rules.md documents this member as "Additionally (starting
+        # sentences)," narrower than a bare word match. Fires when
+        # "additionally" opens a line (covering any indent, and a bullet
+        # marker, since mask_line reduces "- " to a single leading space) or
+        # opens a sentence after [.!?], optionally followed by a closing
+        # quote/paren/bracket, then whitespace. "(?m:^)" is an inline scoped
+        # flag so it does not disturb _compile's IGNORECASE-only contract for
+        # every other regex row. The row runs doc scope against the whole
+        # joined text, so a plain "^" without the scoped "m" would only ever
+        # match position zero.
+        #
+        # "term" overrides "pattern" when scanner.py builds the doc-scope
+        # message: a raw regex is not fit for a developer to read, unlike
+        # every other cluster row, whose pattern already is plain language.
+        "name": "ai_vocab_cluster",
+        "id": "ai_vocab_cluster.additionally",
+        "category": "ai_vocab_cluster",
+        "kind": "regex",
+        "pattern": r"(?:(?m:^)[ \t]*|(?<=[.!?])[\"')\]]?[ \t]+)additionally\b",
+        "term": "additionally",
+        "message": "ai_vocab_cluster member",
+        "scope": "doc",
+        "doc_min": 2,
+        "doc_group": "ai_vocab_cluster",
+    },
+    {
+        # rules.md documents this member as "align with," not bare "align."
+        # A technical sentence like "Align the config with the schema" no
+        # longer matches, since "align" and "with" are not adjacent there.
+        "name": "ai_vocab_cluster",
+        "category": "ai_vocab_cluster",
+        "kind": "phrase",
+        "pattern": "align with",
+        "message": "ai_vocab_cluster member",
+        "scope": "doc",
+        "doc_min": 2,
+        "doc_group": "ai_vocab_cluster",
+    },
 
     # -- faux-conversational bridges (2026 refresh) -------------------------
     *[

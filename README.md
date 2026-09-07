@@ -12,14 +12,14 @@ Both skills share a single rule list, a Python rules engine, and per-repo supple
 Rules tagged **[engine]** run in the Python pre-commit hook engine. Rules tagged **[skill]** run only in the Claude-loaded skills, because they need context a regex cannot reliably see.
 
 - **Hard rules [engine]:** em dashes, en dashes, hyphens used as separators, hedging language ("would like to," "could potentially," "it is worth noting"), copula avoidance ("serves as," "stands as," "acts as," "functions as")
-- **AI vocabulary cluster [engine]:** flags when 2+ words from a known LLM-favored vocabulary appear in the same document (pivotal, crucial, leverage, enduring, intricate, tapestry, testament, etc.)
+- **AI vocabulary cluster [engine]:** flags when 2+ words from a known LLM-favored vocabulary appear in the same document (pivotal, crucial, leverage, enduring, intricate, tapestry, testament, etc.) <!-- voice-check: ignore puffery, ai_vocab_cluster -->
 - **Puffery and significance language [engine]:** "groundbreaking," "renowned," "pivotal," "crucial," "testament," "indelible," "transformative"
 - **Promotional tone [engine]:** "boasts," "nestled in the heart of," "vibrant," "showcasing," "commitment to"
 - **Dangling participles [engine]:** comma followed by gerund phrases like "...highlighting the importance of," "...ensuring that," "...fostering growth"
 - **Vague attributions [engine]:** "experts say," "experts agree," "industry observers note," "sources say," "many believe"
-- **Faux-conversational bridges [engine]:** "here's the thing," "at the end of the day," "let's dive in," "we will explore"
+- **Faux-conversational bridges [engine]:** "here's the thing," "at the end of the day," "let's dive in," "we will explore" <!-- voice-check: ignore bridge_phrases -->
 - **2026 vocabulary [engine for phrases, skill for bare words]:** "quietly building," "this matters because," "built different," "decisions compound"; bare words (quietly, shift, matters, signal, compound) are judged in context by the skill
-- **Markup artifacts [engine]:** leaked citation tokens (contentReference, oaicite, [cite:, grok_card, ppl-ai-file-upload), emoji used as bullet markers
+- **Markup artifacts [engine]:** leaked citation tokens (contentReference, oaicite, [cite:, grok_card, ppl-ai-file-upload), emoji used as bullet markers <!-- voice-check: ignore markup_artifacts -->
 - **Structural tells [skill]:** rule of three, negative parallelism, false ranges, challenges-and-future-prospects, elegant variation
 
 The full rule list is in `plugins/voice-check/references/rules.md`.
