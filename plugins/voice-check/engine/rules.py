@@ -19,9 +19,11 @@ Row schema (dict):
         doc scope aggregates across the whole document
     doc_min:  int, for scope=doc, minimum number of distinct matches required
               to fire a single aggregated finding (default 1)
+    id:       str, globally unique stable identifier, "<name>.<slug>"
+    severity: "high" | "medium" | "low", used for display filtering only
 """
 import re
-from typing import List, Dict, Iterable, Optional
+from typing import List, Dict
 
 SEVERITY_ORDER = {"low": 1, "medium": 2, "high": 3}
 DEFAULT_SEVERITY = "medium"
@@ -354,125 +356,4 @@ def compiled(row: dict) -> re.Pattern:
         c = _compile(row)
         _COMPILED_CACHE[k] = c
     return c
-
-
-# ---------------------------------------------------------------------------
-# Generic scanner
-# ---------------------------------------------------------------------------
-
-_FENCE_RE = re.compile(r"^\s*(```|~~~)")
-_BULLET_RE = re.compile(r"^(\s*)([-*+])(\s+)")
-_INLINE_CODE_RE = re.compile(r"`[^`\n]*`")
-
-
-def _prepare_line_for_rules(line: str) -> str:
-    """Strip inline code spans and leading bullet-list markers from a line.
-
-    Returns a version of the line safe for line-scope rule matching. We
-    replace stripped characters with spaces so that column positions remain
-    aligned with the original line (callers still snippet the raw line).
-    """
-    # Normalize curly apostrophe (U+2019) to a straight apostrophe so
-    # apostrophe-bearing phrases match either form. Same length, so column
-    # positions stay aligned with the original line.
-    out = line.replace("’", "'")
-
-    # Replace inline code spans with same-length runs of spaces
-    def _blank(m: re.Match) -> str:
-        return " " * (m.end() - m.start())
-    out = _INLINE_CODE_RE.sub(_blank, out)
-
-    # Strip the leading bullet marker (turn "  - foo" into "    foo")
-    bm = _BULLET_RE.match(out)
-    if bm:
-        # Replace the [-*+] with a space, keep indentation and trailing space.
-        start, end = bm.start(2), bm.end(2)
-        out = out[:start] + " " + out[end:]
-    return out
-
-
-def _strip_code_blocks(text: str) -> str:
-    """Return text with fenced code block contents replaced by blank lines.
-
-    Preserves line count so line numbers are unaffected if needed elsewhere.
-    """
-    out_lines = []
-    in_fence = False
-    for line in text.splitlines():
-        if _FENCE_RE.match(line):
-            in_fence = not in_fence
-            out_lines.append("")
-            continue
-        if in_fence:
-            out_lines.append("")
-        else:
-            out_lines.append(line)
-    return "\n".join(out_lines)
-
-
-def scan_text(text: str, extra_rows: Optional[Iterable[dict]] = None) -> List[dict]:
-    """Run every rule row (built in plus extras) over text and return findings."""
-    rows = list(RULES)
-    if extra_rows:
-        rows.extend(extra_rows)
-
-    findings: List[dict] = []
-
-    # Line-scope pass. Track fenced code blocks and skip their contents.
-    line_rows = [r for r in rows if r.get("scope", "line") == "line"]
-    in_fence = False
-    for line_num, line in enumerate(text.splitlines(), start=1):
-        if _FENCE_RE.match(line):
-            in_fence = not in_fence
-            continue
-        if in_fence:
-            continue
-        scan_line = _prepare_line_for_rules(line)
-        for row in line_rows:
-            rx = compiled(row)
-            for m in rx.finditer(scan_line):
-                findings.append({
-                    "rule": row["name"],
-                    "line": line_num,
-                    "col": m.start() + 1,
-                    "snippet": line.rstrip("\n"),
-                    "message": row["message"],
-                })
-
-    # Doc-scope pass: group rows by doc_group and aggregate.
-    # Exclude fenced code block content from doc-scope input.
-    doc_text = _strip_code_blocks(text)
-    doc_rows = [r for r in rows if r.get("scope") == "doc"]
-    groups: Dict[str, List[dict]] = {}
-    for r in doc_rows:
-        groups.setdefault(r.get("doc_group", r["name"]), []).append(r)
-
-    for group_name, group_rows in groups.items():
-        hits: List[tuple] = []  # (pattern, start)
-        for row in group_rows:
-            rx = compiled(row)
-            for m in rx.finditer(doc_text):
-                hits.append((row["pattern"], m.start()))
-        if not hits:
-            continue
-        threshold = max((r.get("doc_min", 1) for r in group_rows), default=1)
-        if len(hits) < threshold:
-            continue
-        matched_terms = sorted({h[0] for h in hits})
-        rule_name = group_rows[0]["name"]
-        findings.append({
-            "rule": rule_name,
-            "line": 0,
-            "col": 0,
-            "snippet": "",
-            "message": (
-                f"AI vocabulary cluster: {len(hits)} occurrences across "
-                f"{len(matched_terms)} words: {', '.join(matched_terms)}. "
-                f"Replace with plain language."
-            ) if rule_name == "ai_vocab_cluster" else (
-                f"{rule_name}: {len(hits)} matches: {', '.join(matched_terms)}."
-            ),
-        })
-
-    return findings
 

@@ -3,10 +3,12 @@ from pathlib import Path
 from typing import List
 
 import config
+import document
 import rules
+import scanner
 
 
-def scan(file_path: Path) -> List[dict]:
+def scan(file_path: Path, line_ranges=None) -> List[dict]:
     """Scan a file for writing rule violations. Return a list of findings."""
     file_path = Path(file_path)
     text = file_path.read_text(encoding="utf-8", errors="replace")
@@ -16,7 +18,26 @@ def scan(file_path: Path) -> List[dict]:
     if cfg_path is not None:
         cfg = config.load(cfg_path)
 
-    return rules.scan_text(text, extra_rows=cfg.extra_rows)
+    doc = document.Document.from_markdown(text)
+    return scanner.scan(doc, cfg, rel_path=_rel_path(file_path), line_ranges=line_ranges)
+
+
+def _rel_path(file_path: Path) -> str:
+    """Path relative to the git root, for matching config globs.
+
+    Falls back to the file name when no git root is found.
+    """
+    current = file_path.resolve().parent
+    while True:
+        if (current / ".git").exists():
+            try:
+                return file_path.resolve().relative_to(current).as_posix()
+            except ValueError:
+                break
+        if current.parent == current:
+            break
+        current = current.parent
+    return file_path.name
 
 
 def format_findings(findings: List[dict]) -> str:
