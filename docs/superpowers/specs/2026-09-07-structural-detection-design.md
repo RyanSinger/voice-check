@@ -162,18 +162,18 @@ The tell is a false enumeration of scope, and it has a syntactic signature: lowe
 
 ### Calibration
 
-Running all six patterns over this repository's markdown, twenty one files at the time of writing, produces fourteen hits and zero false positives on genuine prose:
+Running all six patterns over this repository's markdown, twenty two files at the time of writing, produces fourteen hits and zero false positives on genuine prose:
 
 | Rule | Hits |
 | --- | --- |
-| `structure.not_just_but` | 3 |
+| `structure.not_just_but` | 4 |
 | `structure.not_about_but_about` | 3 |
 | `structure.while_also` | 3 |
-| `structure.advantages_disadvantages` | 2 |
+| `structure.advantages_disadvantages` | 1 |
 | `structure.despite_faces_challenges` | 3 |
 | `structure.false_range` | 0 |
 
-Every hit lands in a file that quotes these patterns as examples: `references/examples.md` (its deliberate "before" samples), `references/rules.md`, `references/wikipedia-signs.md`, and `specs/2026-08-11-voice-check-upgrade-design.md`. Each is a document about the rules rather than a document exhibiting them, which is what suppression exists for.
+Every hit lands in a file that quotes these patterns as examples: `references/examples.md` (its deliberate "before" samples), `references/rules.md`, `references/wikipedia-signs.md`, `specs/2026-08-11-voice-check-upgrade-design.md`, and this file, whose own worked note two sections up confirms that "not only X but Y" fires. Each is a document about the rules rather than a document exhibiting them, which is what suppression exists for.
 
 ## The bold header analyzer
 

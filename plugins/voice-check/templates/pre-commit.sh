@@ -2,7 +2,7 @@
 # voice-check pre-commit hook (advisory, report-only)
 # Installed by: voice-check plugin install-hook.sh
 # === voice-check section start ===
-# voice-check hook version: 2.3.0
+# voice-check hook version: 2.4.0
 
 set -e
 
