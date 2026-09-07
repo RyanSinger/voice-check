@@ -35,6 +35,18 @@ _SEVERITY_BY_NAME = {
     "structure": "low",
 }
 
+# Rule NAMES that may run against a commit message. Names, not ids, so a
+# family covers all of its rows and its analyzer together.
+#
+# This is an allowlist, and the direction is the point. A commit message
+# cannot carry a `<!-- voice-check: ignore -->` comment, and once written it
+# is in history, so the surface with no escape hatch is the one that stays
+# closed by default. A rule added later runs on files and does NOT run on
+# commits until someone deliberately adds its name here. A denylist would
+# mean every new rule silently starts firing on every commit until someone
+# noticed. tests/test_surfaces.py pins this set exactly for the same reason.
+COMMIT_SURFACE = frozenset({"no_dashes", "markup_artifacts"})
+
 
 def slug(text: str) -> str:
     """Turn a rule pattern into a readable id fragment.

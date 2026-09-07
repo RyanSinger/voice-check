@@ -81,14 +81,16 @@ def load_config(file_path: Path) -> config.Config:
     return config.load(cfg_path)
 
 
-def scan(file_path: Path, line_ranges=None, cfg: Optional[config.Config] = None) -> List[dict]:
+def scan(file_path: Path, line_ranges=None, cfg: Optional[config.Config] = None,
+         surface: str = "file") -> List[dict]:
     """Scan a file for writing rule violations. Return a list of findings."""
     file_path = Path(file_path)
     text = file_path.read_text(encoding="utf-8", errors="replace")
     if cfg is None:
         cfg = load_config(file_path)
     doc = document.Document.from_markdown(text)
-    return scanner.scan(doc, cfg, rel_path=_rel_path(file_path), line_ranges=line_ranges)
+    return scanner.scan(doc, cfg, rel_path=_rel_path(file_path),
+                        line_ranges=line_ranges, surface=surface)
 
 
 def format_findings(findings: List[dict], min_severity: str = "medium") -> str:
@@ -144,6 +146,10 @@ def main():
                         help="Findings below this level collapse to a count line")
     parser.add_argument("--lines", default=None,
                         help='Restrict findings to these line ranges, e.g. "12-18,40-41"')
+    parser.add_argument("--surface", choices=["file", "commit"], default="file",
+                        help="What kind of text this is. 'commit' runs only "
+                             "the rules that are safe without a suppression "
+                             "comment, since a commit message cannot carry one")
     args = parser.parse_args()
 
     if not args.file.exists():
@@ -165,7 +171,8 @@ def main():
         for w in cfg.warnings:
             print(f"voice-check: {w}", file=sys.stderr)
 
-        findings = scan(args.file, line_ranges=line_ranges, cfg=cfg)
+        findings = scan(args.file, line_ranges=line_ranges, cfg=cfg,
+                        surface=args.surface)
         out = format_findings(findings, args.min_severity)
         if out:
             print(out)

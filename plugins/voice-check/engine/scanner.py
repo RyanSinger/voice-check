@@ -26,17 +26,35 @@ def _offset_to_line(text: str, offset: int) -> int:
     return text.count("\n", 0, offset) + 1
 
 
-def _select_rows(cfg, rel_path: str) -> List[dict]:
+def in_surface(row: dict, surface: str) -> bool:
+    """True when this row or analyzer entry may run against this surface.
+
+    Rule rows and analyzer registry entries share the "name" key, so one
+    helper serves both passes and the allowlist lives in one place.
+    """
+    if surface != "commit":
+        return True
+    return row["name"] in rules.COMMIT_SURFACE
+
+
+def _select_rows(cfg, rel_path: str, surface: str) -> List[dict]:
     rows = list(rules.RULES) + list(cfg.extra_rows)
-    return [r for r in rows if not cfg.is_disabled(r, rel_path)]
+    return [r for r in rows
+            if in_surface(r, surface) and not cfg.is_disabled(r, rel_path)]
 
 
-def scan(doc, cfg, rel_path: str = "", line_ranges=None) -> List[dict]:
-    """Scan a Document and return findings tagged with severity."""
+def scan(doc, cfg, rel_path: str = "", line_ranges=None,
+         surface: str = "file") -> List[dict]:
+    """Scan a Document and return findings tagged with severity.
+
+    surface is "file" or "commit". The commit surface runs only the rule
+    families named in rules.COMMIT_SURFACE, because a commit message cannot
+    host a suppression comment. See in_surface above.
+    """
     if cfg.is_excluded(rel_path):
         return []
 
-    rows = _select_rows(cfg, rel_path)
+    rows = _select_rows(cfg, rel_path, surface)
     findings: List[dict] = []
 
     # Line scope
@@ -117,6 +135,8 @@ def scan(doc, cfg, rel_path: str = "", line_ranges=None) -> List[dict]:
     # entry into a finding happens here, so an analyzer needs no knowledge of
     # suppression, severity, or line ranges.
     for entry in analyzers.ANALYZERS:
+        if not in_surface(entry, surface):
+            continue
         if cfg.is_disabled(entry, rel_path):
             continue
         try:
