@@ -880,3 +880,18 @@ def test_pre_commit_does_not_match_an_extension_mid_name(fresh_repo, fake_home):
     r = _run_hook(fresh_repo)
     assert r.returncode == 0
     assert "archive.txt.gz" not in (r.stdout + r.stderr)
+
+
+# ---------------------------------------------------------------------------
+# Version stamps
+# ---------------------------------------------------------------------------
+
+def test_every_hook_template_stamps_the_current_plugin_version():
+    """The healer compares each hook's stamp against plugin.json. A template
+    left at an older stamp means that hook heals on every session start
+    forever; a template ahead of plugin.json means it never heals at all."""
+    version = _plugin_version()
+    for template in (PRE_COMMIT_TEMPLATE, COMMIT_MSG_TEMPLATE):
+        text = template.read_text()
+        assert f"# voice-check hook version: {version}" in text, (
+            f"{template.name} is not stamped {version}")

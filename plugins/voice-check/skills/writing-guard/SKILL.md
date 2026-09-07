@@ -23,7 +23,7 @@ The `voice-check` skill cleans up AI writing tells AFTER they appear in a file. 
 ## When NOT to use this skill
 
 - When transcribing the user's exact words (the rules are about generated prose, not user quotes)
-- When writing code, code comments, or commit messages where dashes and technical jargon are appropriate
+- When writing code itself, where dashes and technical jargon are part of the syntax or the domain
 - When explicitly asked to mimic a specific style that conflicts with the rules
 
 ## References
