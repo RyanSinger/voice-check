@@ -46,7 +46,7 @@ Important: the engine duplicates a subset of the markdown rules as code. When ad
 
 ## Commands
 
-Run the engine tests (207 pytest cases across `plugins/voice-check/tests/`):
+Run the engine tests (211 pytest cases across `plugins/voice-check/tests/`):
 
 ```bash
 cd plugins/voice-check

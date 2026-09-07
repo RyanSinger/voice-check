@@ -140,7 +140,12 @@ def scan(doc, cfg, rel_path: str = "", line_ranges=None) -> List[dict]:
                 raw_lines = item["lines"]
                 evidence = [
                     ln for ln in raw_lines
-                    if isinstance(ln, int) and 1 <= ln <= len(doc.lines)
+                    # bool is a subclass of int in Python, so an explicit
+                    # exclusion is required here. Without it, an analyzer
+                    # returning "lines": [True] would evidence a finding on
+                    # line 1 with True treated as the line number.
+                    if isinstance(ln, int) and not isinstance(ln, bool)
+                    and 1 <= ln <= len(doc.lines)
                     and not _suppressed(doc, ln, entry)
                 ]
                 if not evidence:
@@ -162,6 +167,16 @@ def scan(doc, cfg, rel_path: str = "", line_ranges=None) -> List[dict]:
             # passes or the other analyzers. This is the one place the
             # project's "degrade toward reporting more" principle cannot
             # hold.
+            #
+            # Known choice, not a bug: if an analyzer raises partway through
+            # its own produced list, whatever entries were already appended
+            # to findings before the failure stay in the report. The message
+            # below says the analyzer was "skipped," which describes what
+            # happens to the rest of its output, not what already landed.
+            # With a single analyzer registered today this never happens in
+            # practice, since mechanical_bold_headers returns at most one
+            # entry, but a future analyzer producing several entries could
+            # hit it.
             print(
                 f"voice-check: analyzer {entry['id']} failed ({exc}), skipping",
                 file=sys.stderr,
