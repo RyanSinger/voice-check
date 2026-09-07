@@ -6,6 +6,14 @@ scanning takes place. Malformed configuration, unreadable files, and
 unexpected exceptions during a scan all still exit 0. Every degradation path
 falls toward reporting more, never toward silently reporting less.
 """
+# Annotations must never be evaluated at definition time. Several functions
+# below are annotated with types from the modules imported in the guarded
+# block, so on Python 3.11 and 3.12, where annotations are eager, a missing
+# module would raise NameError from the annotation itself, after the guard
+# already caught the ImportError. Python 3.14 defers annotations and hides
+# this, so the failure only appears on the versions CI actually runs.
+from __future__ import annotations
+
 import re
 import sys
 from pathlib import Path
